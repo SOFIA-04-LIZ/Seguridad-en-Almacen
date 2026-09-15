@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Responsive layout checks</title></head><body><pre id="results">RUNNING</pre><iframe id="app" style="border:0" src="../index.html"></iframe><script>
+const sizes=[[320,568],[360,640],[390,844],[430,932],[568,320],[667,375],[844,390],[932,430],[768,1024]];
+const frame=document.querySelector('#app'),results=[];
+const wait=()=>new Promise(r=>setTimeout(r,120));
+frame.onload=async()=>{
+ try{
+ for(const [width,height] of sizes){
+ frame.style.width=width+'px';frame.style.height=height+'px';await wait();
+ const doc=frame.contentDocument,win=frame.contentWindow;
+ const box=s=>doc.querySelector(s).getBoundingClientRect();
+ const check=(condition,message)=>{if(!condition)throw Error(width+'x'+height+': '+message)};
+ const modal=box('#modal');check(modal.left>=-1&&modal.right<=width+1,'dialog exceeds viewport');check(modal.top>=-1&&modal.bottom<=height+1,'dialog exceeds height');
+ check(doc.documentElement.scrollWidth<=width+1,'horizontal page overflow');
+ doc.querySelector('#overlay').classList.add('hidden');await wait();
+ check(doc.documentElement.scrollWidth<=width+1,'horizontal game overflow');
+ const stage=box('.stage'),touch=box('.touch');check(stage.width>0&&stage.height>0,'empty stage');
+ check(win.getComputedStyle(doc.querySelector('.touch')).display!=='none','touch controls hidden');
+ for(const button of doc.querySelectorAll('.touch button')){const r=button.getBoundingClientRect();check(r.width>=44&&r.height>=44,'touch target too small');}
+ check(box('.game-shell').height<=height+1,'game plus controls taller than screen: '+box('.game-shell').height);
+ check(touch.top>=stage.bottom-1,'controls overlap scene');
+ results.push(width+'x'+height+' PASS');doc.querySelector('#overlay').classList.remove('hidden');
+ }
+ document.querySelector('#results').textContent=results.join('\n')+'\nALL PASS';
+ }catch(error){document.querySelector('#results').textContent=results.join('\n')+'\nFAIL '+error.message;}
+};
+</script></body></html>
