@@ -28,11 +28,11 @@ En dispositivos táctiles aparecen botones. Cambiar de ventana pausa la partida.
 
 ## Recorrido sin salida
 
-Al llegar al extremo del sector se genera el siguiente y el personaje continúa con su EPP y sus vidas. No hay puerta final ni pantalla de victoria. La partida termina cuando se agotan las tres vidas.
+Al llegar al extremo del sector se genera el siguiente y el personaje continúa con su EPP y sus vidas. No hay puerta final ni pantalla de victoria. La partida comienza con tres vidas y termina al llegar a cero. Se pueden recuperar vidas con monedas seguras, hasta un máximo de cinco.
 
-El personaje avanza automáticamente y acelera en sectores posteriores; una racha aumenta al cruzar con seguridad, registrar Stella, reportar observaciones y completar escaleras. También hay puntos de atención opcionales para recoger saltando en espacios libres. Al terminar, se puede reintentar de inmediato con el mismo EPP o cambiarlo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
+El personaje avanza automáticamente y acelera en sectores posteriores; una racha aumenta al cruzar con seguridad, registrar Stella o Flying Fish, reportar observaciones y completar escaleras. También hay puntos de atención opcionales para recoger saltando en espacios libres. Al terminar, se puede reintentar de inmediato con el mismo EPP o cambiarlo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
 
-Los contadores acumulan tarimas de Stella, condiciones reportadas, actos inseguros reportados y escaleras recorridas. Cada sector renueva sus objetos y reportes; las condiciones que se dejaron atrás sin reportar no suman puntos. Los cinco objetivos del panel corresponden al sector actual.
+Los contadores acumulan tarimas de Stella y Flying Fish, monedas, condiciones reportadas, actos inseguros reportados y escaleras recorridas. Cinco monedas recogidas en la ruta segura dan una vida adicional. Las monedas tentadoras dentro de dos cruces solo se pueden recoger tras esperar la señal; entrar por ella antes de tiempo cuesta una vida y muestra una explicación. Cada sector renueva sus objetos y reportes; las condiciones que se dejaron atrás sin reportar no suman puntos. Los seis objetivos del panel corresponden al sector actual.
 
 La dificultad aumenta de forma gradual:
 
@@ -58,13 +58,15 @@ Cada incidente de equipo ocurre una vez por partida y resta una vida:
 
 Después aparece una explicación. Si quedan vidas, se puede corregir esa elección y continuar. Si no quedan vidas, primero se muestra la explicación y después el resultado. Las animaciones son caricaturescas y sin sangre.
 
-En cada sector hay cinco condiciones para encontrar: tarima inclinada, banco en la ruta del montacargas, derrame sin señalizar, flejes/plástico sueltos y extintor bloqueado. Al interactuar se debe identificar la condición entre tres opciones. Una respuesta equivocada no resta vidas. Reportar suma una sola vez por objeto y no elimina visualmente el peligro.
+En cada sector hay cinco condiciones para encontrar: tarima inclinada, gotera sobre la ruta peatonal, derrame sin señalizar, flejes/plástico sueltos y extintor bloqueado. Al interactuar se debe identificar la condición entre tres opciones. Una respuesta equivocada no resta vidas. Reportar suma una sola vez por objeto y no elimina visualmente el peligro.
 
 ## Actos inseguros de las personas
 
-Cada sector incorpora dos personas animadas:
+Cada sector incorpora cuatro personas animadas:
 
 - Una persona camina sin casco por el almacén.
+- Otra trabaja sin el chaleco de alta visibilidad requerido.
+- Otra se acerca demasiado a un montacargas en movimiento.
 - Otra sube y baja por la escalera con las manos junto al cuerpo, sin sujetarse del pasamanos.
 
 El jugador puede acercarse e interactuar con E para identificar la conducta entre tres opciones. La interacción toma en cuenta la posición y la altura de la persona. Las escenas se detienen mientras se responde. Una respuesta incorrecta permite reintentar sin perder vidas; la correcta suma una sola vez al contador ACTOS y muestra una explicación.
@@ -73,7 +75,7 @@ Los actos se contabilizan por separado de las condiciones del entorno. Cada sect
 
 ## Ubicaciones variables
 
-Cada partida y cada sector redistribuyen las cinco condiciones y la persona sin casco entre zonas de observación distintas. Ninguna de esas escenas repite la misma zona que ocupó en la distribución anterior. Se conserva separación entre escenas y se evitan cruces, zonas de alto y escaleras.
+Cada partida y cada sector redistribuyen las cinco condiciones y las tres personas de la ruta peatonal entre zonas de observación distintas. Ninguna de esas escenas repite la misma zona que ocupó en la distribución anterior. Se conserva separación entre escenas y se evitan cruces, zonas de alto y escaleras.
 
 La persona que no usa el pasamanos cambia de tramo de escalera y, cuando hay varias escaleras, también puede cambiar de escalera. Su posición inicial y dirección de marcha varían. Las posiciones se mantienen durante el sector; pausar o abrir una inspección no cambia la distribución.
 

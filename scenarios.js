@@ -18,14 +18,18 @@ window.WAREHOUSE_SCENARIOS = {
   acts: [
     {id:'noHelmet',title:'Persona caminando sin casco',choices:['Caminar sin el casco requerido','Usar el chaleco de alta visibilidad','Caminar con el equipo completo'],answer:0,
       explanation:'La persona camina por el almacén sin el casco requerido en esta misión. Es un acto inseguro: corresponde a una conducta, no al estado de un objeto. Reporta lo observado para que se corrija el uso de EPP antes de continuar la tarea.'},
+    {id:'noVest',title:'Persona trabajando sin chaleco de alta visibilidad',choices:['Usar chaleco de alta visibilidad','Trabajar sin el chaleco requerido','Esperar la señal peatonal'],answer:1,
+      explanation:'La persona trabaja sin chaleco en una zona donde circulan equipos móviles. Es una conducta insegura: reporta y solicita que use el EPP requerido antes de continuar.'},
+    {id:'nearForklift',title:'Persona demasiado cerca del montacargas',choices:['Mantener distancia del montacargas','Trabajar junto al montacargas en movimiento','Usar el paso peatonal'],answer:1,
+      explanation:'La persona se acercó a la zona de maniobra del montacargas. Debe detenerse, mantener distancia y confirmar que el equipo se detuvo antes de avanzar.'},
     {id:'noHandrail',title:'Subir o bajar sin sujetarse del pasamanos',choices:['Usar el pasamanos al subir','Subir y bajar sin sujetarse del pasamanos','Transitar por una escalera dañada'],answer:1,
       explanation:'La escalera tiene pasamanos, pero la persona mantiene las manos junto al cuerpo y no se sujeta al subir o bajar. El acto inseguro es cómo usa la escalera. Reporta la conducta; sujetarse del pasamanos ayuda a mantener el equilibrio.'}
   ],
   hazards: [
     {id:'leaning',x:500,title:'Tarima inclinada con carga inestable',choices:['Tarima inclinada con riesgo de caída','Tarima estable y correctamente colocada','Falta de iluminación'],answer:0,
       explanation:'La carga puede caer hacia el pasillo. Conserva distancia, reporta y solicita que personal autorizado delimite y asegure el área. No intentes enderezarla ni sujetar las cajas.'},
-    {id:'bench',x:1430,title:'Banco en la ruta del montacargas',choices:['Cruce peatonal autorizado','Ruta del montacargas obstruida por un banco','Carga correctamente asegurada'],answer:1,
-      explanation:'El banco obstruye la circulación y puede provocar una colisión o una maniobra peligrosa. Reporta la obstrucción para que se controle el tránsito antes de retirarla; no entres a la ruta de un vehículo en movimiento.'},
+    {id:'leak',x:1430,title:'Gotera sobre la ruta peatonal',choices:['Ruta seca y despejada','Gotera que moja el paso peatonal','Zona de almacenamiento delimitada'],answer:1,
+      explanation:'La gotera moja el piso y puede provocar un resbalón. Evita la zona y repórtala para que se señalice, se controle el agua y se repare la filtración.'},
     {id:'spill',x:2100,title:'Derrame sin señalizar',choices:['Piso seco y despejado','Zona de almacenamiento delimitada','Líquido derramado sin señalización'],answer:2,
       explanation:'El líquido genera riesgo de resbalón. Evita el derrame y reporta para que se señalice y atienda con el procedimiento correspondiente. No pases sobre él ni lo limpies sin saber qué sustancia es.'},
     {id:'wrap',x:2730,title:'Flejes y plástico sueltos',choices:['Material suelto con riesgo de tropiezo','Material asegurado dentro de una tarima','Señal de salida'],answer:0,
