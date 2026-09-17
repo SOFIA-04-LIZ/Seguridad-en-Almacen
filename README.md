@@ -12,7 +12,7 @@ Abre `index.html` en un navegador moderno. No requiere instalación ni servidor.
 
 ## Pantallas de celular
 
-La interfaz se adapta a orientación vertical y horizontal, con botones táctiles de al menos 44 píxeles, cuadros de preguntas desplazables y espacio para las áreas seguras del dispositivo. Al entrar a jugar en celular, la página se desplaza al juego. Girar la pantalla ajusta la cámara y la resolución sin reiniciar la partida.
+La interfaz se adapta a orientación vertical y horizontal, con botones táctiles de al menos 44 píxeles, cuadros de preguntas desplazables y espacio para las áreas seguras del dispositivo. El instructivo y los objetivos aparecen antes del escenario. La bienvenida y el botón de inicio aparecen dentro del escenario; al pulsarlo se abre allí la selección de EPP. Al confirmar el equipo comienza el recorrido. Girar la pantalla ajusta la cámara y la resolución sin reiniciar la partida.
 
 Se verificaron en Chrome nueve tamaños: 320×568, 360×640, 390×844, 430×932, 568×320, 667×375, 844×390, 932×430 y 768×1024. La comprobación está en `tests/mobile.html`; para ejecutarla, sirve la carpeta con un servidor local y abre esa página. Comprueba desbordamientos, cuadros, controles y altura del juego.
 
@@ -30,6 +30,8 @@ En dispositivos táctiles aparecen botones. Cambiar de ventana pausa la partida.
 
 Al llegar al extremo del sector se genera el siguiente y el personaje continúa con su EPP y sus vidas. No hay puerta final ni pantalla de victoria. La partida termina cuando se agotan las tres vidas.
 
+El personaje avanza a 300 unidades por segundo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
+
 Los contadores acumulan tarimas de Stella, condiciones reportadas, actos inseguros reportados y escaleras recorridas. Cada sector renueva sus objetos y reportes; las condiciones que se dejaron atrás sin reportar no suman puntos. Los cinco objetivos del panel corresponden al sector actual.
 
 La dificultad aumenta de forma gradual:
@@ -38,7 +40,7 @@ La dificultad aumenta de forma gradual:
 - Desde el sector 2: tres cruces y dos escaleras.
 - Desde el sector 4: cuatro cruces.
 - Las escaleras aumentan hasta 12 peldaños por tramo y los peldaños se estrechan hasta un mínimo de 19 unidades.
-- El tiempo de alto aumenta de 1.2 a un máximo de 2.4 segundos; la zona de detención se estrecha de 115 a un mínimo de 65 unidades.
+- El tiempo de alto aumenta de 0.8 a un máximo de 1.6 segundos; la zona de detención se estrecha de 115 a un mínimo de 65 unidades.
 - Los montacargas en movimiento aceleran su animación progresivamente. Cuando aparece PASA se detienen.
 
 Las escaleras se recorren caminando sobre una superficie escalonada; no son tarimas. No se permite atravesarlas saltando. Una escalera suma al contador después de alcanzar la pasarela y terminar el descenso hacia la derecha.

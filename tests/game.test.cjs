@@ -6,7 +6,7 @@ const path = require('node:path');
 const nodes = new Map();
 function node() {
   return {children:[],dataset:{},textContent:'',disabled:false,
-    classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},
+    classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},scrollIntoView(){},
     append(child){this.children.push(child)},querySelector(){return node()},
     set innerHTML(value){this.html=value;this.children=[];if(this===nodes.get('#modal'))for(const key of ['.equipment','.hazard-options','.feedback'])nodes.delete(key)},
     get innerHTML(){return this.html || ''}};
@@ -27,8 +27,8 @@ const code = fs.readFileSync(path.join(__dirname,'../game.js'),'utf8').replace('
 vm.runInContext(code,sandbox);
 const t=sandbox.test, $=s=>document.querySelector(s), step=(n=1)=>{for(let i=0;i<n;i++)t.update(1/60)};
 // The actual entry button accepts wrong and empty choices, and exclusive slots stay exclusive.
-$('#enter').onclick();assert.equal(t.state,'playing');assert.equal(t.epp,false);
-t.reset();const buttons=$('.equipment').children;
+assert.equal(t.state,'ready');$('#start-game').onclick();assert.equal(t.state,'equipment');$('#enter').onclick();assert.equal(t.state,'playing');assert.equal(t.epp,false);
+t.reset();$('#start-game').onclick();const buttons=$('.equipment').children;
 buttons.find(b=>b.dataset.equipment==='helmet').onclick();buttons.find(b=>b.dataset.equipment==='cap').onclick();
 buttons.find(b=>b.dataset.equipment==='headphones').onclick();$('#enter').onclick();
 assert(t.worn.has('cap'));assert(!t.worn.has('helmet'));assert(t.worn.has('headphones'));
@@ -42,6 +42,18 @@ for(const [ids,x,id,fix] of [
   const lives=t.lives;step(100);assert.equal(t.lives,lives);$('#correct').onclick();assert.equal(t.state,'playing');
   if(fix)assert(t.worn.has(fix));assert(!t.worn.has('headphones'));step(120);assert.equal(t.lives,2);
 }
+// Passing an unreported condition or act costs one life and explains the miss once.
+t.reset();t.start();const missedHazard=t.hazards[0];
+t.hazards.filter(h=>h!==missedHazard).forEach(h=>h.reported=true);t.workers.forEach(w=>w.reported=true);
+t.crossings.forEach(c=>c.cleared=true);t.place(missedHazard.x+110);t.keys.right=true;step();
+assert.equal(t.state,'lesson');assert.equal(t.lives,2);assert(missedHazard.missed);assert($('#modal').innerHTML.includes(missedHazard.title));
+$('#continue-miss').onclick();step();assert.equal(t.lives,2);
+t.reset();t.start();const missedAct=t.workers.find(w=>w.id==='noHelmet');
+t.hazards.forEach(h=>h.reported=true);t.workers.filter(w=>w!==missedAct).forEach(w=>w.reported=true);
+t.crossings.forEach(c=>c.cleared=true);t.place(missedAct.max+110);t.keys.right=true;step();
+assert.equal(t.state,'lesson');assert.equal(t.lives,2);assert(missedAct.missed);assert($('#modal').innerHTML.includes(missedAct.title));
+$('#continue-miss').onclick();t.place(missedAct.x-16);t.interact();assert.equal(t.state,'inspection');
+$('.hazard-options').children[missedAct.answer].onclick();$('#continue').onclick();assert(missedAct.reported);
 // Three bad choices show the third explanation before the loss screen.
 t.reset();t.start(['cap','sandals','headphones']);
 for(const x of [301,651,1121]){t.place(x);step();step(120);assert.equal(t.state,'lesson');$('#correct').onclick();}
@@ -54,7 +66,7 @@ t.interact();assert.equal(t.state,'playing');assert.equal(t.hazards.filter(h=>h.
 // No exit at the former door location.
 t.place(2500);t.interact();assert(t.found);t.crossings.forEach(c=>c.cleared=true);t.hud();t.place(4000);t.interact();assert.equal(t.state,'playing');
 // Complete the full route, inspecting every condition through real answer handlers.
-t.reset();t.start();let frames=0;
+t.reset();t.start();t.workers.forEach(w=>w.reported=true);let frames=0;
 while(t.sector===1&&frames++<5000){
  const p=t.player,c=t.crossings.find(c=>!c.cleared&&p.x+32>c.x-95&&p.x+32<=c.x);
  t.keys.right=!c;step();
@@ -75,6 +87,7 @@ console.log('PASS: entry choices, six equipment cases, explanations/corrections,
 // Mandatory ascent and descent, plus difficulty growth across five consecutive sectors.
 t.reset();t.start();let maxHeight=0;let limit=0;
 while(t.sector<6&&limit++<15000){
+ t.hazards.forEach(h=>h.reported=true);t.workers.forEach(w=>w.reported=true);
  const p=t.player,c=t.crossings.find(c=>!c.cleared&&p.x+32>c.x-t.stopWidth()+15&&p.x+32<=c.x);
  t.keys.right=!c;step();maxHeight=Math.max(maxHeight,380-p.y);
  assert.equal(t.state,'playing','Continuous safe route must remain traversable');
@@ -95,8 +108,8 @@ const stairWorker=t.workers[1];t.place(stairWorker.x-16,stairWorker.feet-66);t.i
 const frozenX=stairWorker.x;step(90);assert.equal(stairWorker.x,frozenX);
 $('.hazard-options').children[stairWorker.answer].onclick();$('#continue').onclick();assert.equal(t.totalActs,2);assert.equal(t.totalReports,0);t.render();
 // Reports survive sector changes; new people are reportable and full reset clears the totals.
-t.place(4960);t.keys.right=true;step(10);assert.equal(t.sector,2);assert.equal(t.totalActs,2);assert(t.workers.every(w=>!w.reported));
-const climber=t.workers[1];let low=climber.feet,high=climber.feet;for(let i=0;i<600;i++){step();low=Math.min(low,climber.feet);high=Math.max(high,climber.feet);}assert(high-low>60,'Worker visibly climbs and descends');
+t.hazards.forEach(h=>h.reported=true);t.place(4960);t.keys.right=true;step(10);assert.equal(t.sector,2);assert.equal(t.totalActs,2);assert(t.workers.every(w=>!w.reported));
+t.keys.right=false;const climber=t.workers[1];let low=climber.feet,high=climber.feet;for(let i=0;i<600;i++){step();low=Math.min(low,climber.feet);high=Math.max(high,climber.feet);}assert(high-low>60,'Worker visibly climbs and descends');
 t.reset();assert.equal(t.totalActs,0);assert(t.workers.every(w=>!w.reported));
 console.log('PASS: moving unsafe actors, wrong/correct answers, separate counts, duplicate protection, inspection pause, stair movement, sector persistence and reset.');
 

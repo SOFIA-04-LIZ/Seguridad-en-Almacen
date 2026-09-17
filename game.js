@@ -37,7 +37,7 @@
     if(sector>=4)crossings.push({x:2350,w:140,hold:0,cleared:false});
     pallets.splice(0,pallets.length,...basePallets.map(p=>({...p,registered:false})));
     const locations=randomLocations();
-    hazards.splice(0,hazards.length,...window.WAREHOUSE_SCENARIOS.hazards.map(h=>({...h,x:locations.get(h.id),reported:false})));
+    hazards.splice(0,hazards.length,...window.WAREHOUSE_SCENARIOS.hazards.map(h=>({...h,x:locations.get(h.id),reported:false,missed:false})));
     // Move decorative stock out of the observation bays so people and conditions remain visible.
     for(let i=storage.length-1;i>=0;i--)if([...locations.values()].some(x=>x+85>storage[i].x&&x-85<storage[i].x+storage[i].w))storage.splice(i,1);
     stairs.length=0;
@@ -50,7 +50,7 @@
       const min=a.id==='noHelmet'?locations.get(a.id)-25:route.side==='up'?route.s.x+25:route.s.x+run+route.s.deck+15;
       const max=a.id==='noHelmet'?locations.get(a.id)+25:route.side==='up'?route.s.x+run-15:route.s.x+stairWidth(route.s)-25;
       const x=min+Math.random()*(max-min);
-      return {...a,type:'act',reported:false,min,max,x,feet:a.id==='noHelmet'?FLOOR:floorAt(x),direction:Math.random()<.5?-1:1,phase:Math.random()*Math.PI*2};
+      return {...a,type:'act',reported:false,missed:false,min,max,x,feet:a.id==='noHelmet'?FLOOR:floorAt(x),direction:Math.random()<.5?-1:1,phase:Math.random()*Math.PI*2};
     }));
     noJumpZones.splice(0,noJumpZones.length,...storage.map(p=>({x:p.x-8,w:p.w+16})),...pallets.map(p=>({x:p.x-10,w:124})),...hazards.map(h=>({x:h.x-48,w:96})));
   }
@@ -61,7 +61,7 @@
 
   let worn=new Set(), incident=null, triggered=new Set();
 
-  let state='equipment',player,lives=3,found=false,epp=false,camera=0,time=0,last=0,toastTime=0,deathTime=0,crash=null;
+  let state='ready',player,lives=3,found=false,epp=false,camera=0,time=0,last=0,toastTime=0,deathTime=0,crash=null;
   function clearKeys(){keys.left=keys.right=keys.jump=false;}
   function toast(message,seconds=4){$('#toast').textContent=message;$('#toast').classList.add('visible');toastTime=seconds;}
   function hud(){
@@ -69,19 +69,28 @@
     epp=worn.has('helmet')&&worn.has('vest')&&worn.has('boots')&&!worn.has('headphones')&&!worn.has('cap')&&!worn.has('sandals');
     const reports=hazards.filter(h=>h.reported).length;
     $('#hazard-count').textContent=totalReports;$('#act-count').textContent=totalActs;
-    $('#hazard-list').innerHTML=hazards.map((h,i)=>'<li class="'+(h.reported?'reported':'')+'">'+(h.reported?'✓ '+h.title:'○ Condición '+(i+1)+' por encontrar')+'</li>').join('');
-    $('#act-list').innerHTML=workers.map((a,i)=>'<li class="'+(a.reported?'reported':'')+'">'+(a.reported?'✓ '+a.title:'○ Acto '+(i+1)+' por encontrar')+'</li>').join('');
     const done=[epp,crossings.every(c=>c.cleared),found,reports===hazards.length,workers.every(a=>a.reported)];['epp','cross','stella','hazards','acts'].forEach((id,i)=>{const el=$('#obj-'+id);el.classList.toggle('done',done[i]);el.querySelector('span').textContent=done[i]?'✓':'↗';});$('#progress').textContent=done.filter(Boolean).length+' DE 5 COMPLETADOS';
   }
-  function reset(){sector=1;totalReports=totalPallets=completedStairs=totalActs=0;buildSector();worn=new Set();triggered=new Set();incident=null;hazards.forEach(h=>h.reported=false);lives=3;found=epp=false;camera=0;crash=null;deathTime=0;player={x:110,y:FLOOR-66,w:32,h:66,vx:0,vy:0,ground:true,face:1};crossings.forEach(c=>{c.cleared=false;c.hold=0;});clearKeys();$('#toast').classList.remove('visible');$('#zone').textContent='● ACCESO AL ALMACÉN';hud();showEquipment();}
+  function reset(){sector=1;totalReports=totalPallets=completedStairs=totalActs=0;buildSector();worn=new Set();triggered=new Set();incident=null;hazards.forEach(h=>h.reported=false);lives=3;found=epp=false;camera=0;crash=null;deathTime=0;player={x:110,y:FLOOR-66,w:32,h:66,vx:0,vy:0,ground:true,face:1};crossings.forEach(c=>{c.cleared=false;c.hold=0;});clearKeys();$('#toast').classList.remove('visible');$('#zone').textContent='● ACCESO AL ALMACÉN';hud();showWelcome();}
+  function showWelcome(){
+    state='ready';$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#overlay').classList.add('ready');
+    $('#modal').innerHTML='<p class="eyebrow">INICIO DEL RECORRIDO</p><h2>¿Ya quieres iniciar el juego?</h2><p>Primero elegirás tu EPP. Después comenzará el recorrido por el almacén.</p><button class="primary" id="start-game">Sí, elegir mi EPP →</button>';
+    $('#start-game').onclick=showEquipment;
+  }
   function showEquipment(){
-    state='equipment';$('#pause').disabled=true;$('#overlay').classList.remove('hidden');
-    $('#modal').innerHTML='<p class="eyebrow">ANTES DE ENTRAR / 01</p><h2>La seguridad empieza contigo.</h2><p>Elige cómo entrar al almacén. <b>Jugarás con lo que selecciones</b>, aunque sea incorrecto. Las decisiones inseguras activan incidentes, restan una vida y explican qué debes corregir.</p><div class="equipment"></div><p class="feedback" role="status"></p><button class="primary" id="enter">Entrar con mi elección →</button><p class="tiny">Usa las flechas y espacio. Camina por la ruta peatonal. Puedes saltar en los espacios libres, pero no sobre las tarimas.</p>';
+    state='equipment';$('#pause').disabled=true;$('#overlay').classList.remove('ready');$('#overlay').classList.remove('hidden');document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});
+    $('#modal').innerHTML='<p class="eyebrow">ANTES DE ENTRAR / 01</p><h2>La seguridad empieza contigo.</h2><p>Elige cómo entrar al almacén. <b>Jugarás con lo que selecciones</b>, aunque sea incorrecto. Las decisiones inseguras activan incidentes, restan una vida y explican qué debes corregir.</p><div class="equipment"></div><p class="feedback" role="status"></p><button class="primary" id="enter">Comenzar recorrido con mi elección →</button><p class="tiny">Usa las flechas y espacio. Camina por la ruta peatonal. Puedes saltar en los espacios libres, pero no sobre las tarimas.</p>';
     const selected=new Set();equipment.forEach(([id,icon,name])=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed','false');b.innerHTML='<span>'+icon+'</span>'+name;b.dataset.equipment=id;b.onclick=()=>{if(selected.has(id))selected.delete(id);else{const opposite={helmet:'cap',cap:'helmet',boots:'sandals',sandals:'boots'}[id];if(opposite)selected.delete(opposite);selected.add(id);}document.querySelectorAll('[data-equipment]').forEach(button=>button.setAttribute('aria-pressed',String(selected.has(button.dataset.equipment))));};$('.equipment').append(b);});
-    $('#enter').onclick=()=>{worn=new Set(selected);state='playing';clearKeys();$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();if(window.matchMedia?.('(max-width:800px), (pointer:coarse)').matches)document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};
+    $('#enter').onclick=()=>{worn=new Set(selected);state='playing';clearKeys();$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};
+  }
+  function missObservation(item){
+    item.missed=true;lives--;state='lesson';clearKeys();$('#pause').disabled=true;hud();$('#overlay').classList.remove('hidden');
+    const kind=item.type==='act'?'acto inseguro':'condición insegura';
+    $('#modal').innerHTML='<p class="eyebrow">PASASTE SIN REPORTAR · −1 VIDA</p><h2>Se te pasó un '+kind+'.</h2><p><b>'+item.title+'</b></p><p>'+item.explanation+'</p><p class="tiny">Perdiste una vida porque avanzaste sin identificar y reportar esta situación. Observa cada zona antes de seguir; puedes regresar a reportarla si conservas vidas.</p><button class="primary" id="continue-miss">'+(lives?'Continuar y observar →':'Ver resultado del turno →')+'</button>';
+    $('#continue-miss').onclick=()=>{if(!lives){finish();return;}state='playing';$('#overlay').classList.add('hidden');$('#pause').disabled=false;};
   }
   function needsIncident(s){return s.id==='head'?!worn.has('helmet'):s.id==='audio'?worn.has('headphones'):s.id==='feet'?!worn.has('boots'):!worn.has('vest');}
-  function startIncident(s){incident=s;triggered.add(s.id);lives--;state='incident';deathTime=1.8;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;clearKeys();$('#pause').disabled=true;hud();toast('Incidente por tu elección de equipo · −1 vida',2);}
+  function startIncident(s){incident=s;triggered.add(s.id);lives--;state='incident';deathTime=1.1;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;clearKeys();$('#pause').disabled=true;hud();toast('Incidente por tu elección de equipo · −1 vida',2);}
   function showLesson(){
     state='lesson';$('#overlay').classList.remove('hidden');
     const title=incident.missingTitle&&!worn.has(incident.remove)?incident.missingTitle:incident.title;
@@ -100,19 +109,19 @@
   function pause(){if(state==='playing'){state='paused';clearKeys();$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">TOMA UN RESPIRO</p><h2>Turno en pausa.</h2><p>Sector '+sector+' · Recorrido continuo. La partida se conserva mientras está en pausa.</p><button class="primary" id="resume">Continuar misión →</button>';$('#resume').onclick=pause;}else if(state==='paused'){state='playing';$('#overlay').classList.add('hidden');}}
   function finish(){state='lost';clearKeys();$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p>Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p><div class="result"><span>Sector: '+sector+'</span><span>Stella: '+totalPallets+'</span><span>Reportes: '+totalReports+'</span><span>Actos: '+totalActs+'</span><span>Escaleras: '+completedStairs+'</span></div><button class="primary" id="again">Volver a jugar ↻</button>';$('#again').onclick=reset;}
   function interact(){if(state!=='playing')return;const h=[...hazards,...workers].filter(h=>!h.reported&&Math.abs(player.x+16-h.x)<90&&player.ground&&Math.abs(player.y+player.h-(h.feet??FLOOR))<85).sort((a,b)=>Math.abs(player.x+16-a.x)-Math.abs(player.x+16-b.x))[0];if(h){inspectHazard(h);return;}const p=pallets.find(p=>Math.abs(player.x+16-(p.x+53))<115&&player.ground&&player.y>300);if(p){if(p.brand==='STELLA'){if(found){toast('Tarima ya registrada.');return;}found=true;p.registered=true;totalPallets++;hud();toast('¡Tarima de Stella registrada!',5);}else toast('Esta tarima es de '+p.brand+'.');}else toast('No se registró ninguna interacción.');}
-  $('#pause').onclick=pause;$('#restart').onclick=reset;
+  $('#pause').onclick=pause;$('#restart').onclick=()=>{reset();document.querySelector('.setup').scrollIntoView({block:'start',behavior:'instant'});};
   window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','Space'].includes(e.code)&&!['BUTTON','INPUT'].includes(e.target.tagName))e.preventDefault();if(e.repeat&&['KeyE','KeyP','Escape','Space','ArrowUp','KeyW'].includes(e.code))return;if(['KeyP','Escape'].includes(e.code)){pause();return;}if(state!=='playing')return;if(['ArrowLeft','KeyA'].includes(e.code))keys.left=true;if(['ArrowRight','KeyD'].includes(e.code))keys.right=true;if(['Space','ArrowUp','KeyW'].includes(e.code))keys.jump=true;if(e.code==='KeyE')interact();});
   window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA'].includes(e.code))keys.left=false;if(['ArrowRight','KeyD'].includes(e.code))keys.right=false;if(['Space','ArrowUp','KeyW'].includes(e.code))keys.jump=false;});
   window.addEventListener('blur',()=>{clearKeys();if(state==='playing')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')pause();});
   document.querySelectorAll('[data-key]').forEach(b=>{const key=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);if(state!=='playing')return;if(key==='interact')interact();else keys[key]=true;});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>{if(key!=='interact')keys[key]=false;}));});
-  function hit(c){lives--;state='dying';deathTime=1.6;crash=c;clearKeys();hud();toast('¡Alto! Cruzaste sin detenerte. −1 vida. Espera el verde antes de pasar.',5);}
+  function hit(c){lives--;state='dying';deathTime=.9;crash=c;clearKeys();hud();toast('¡Alto! Cruzaste sin detenerte. −1 vida. Espera el verde antes de pasar.',5);}
   function update(dt){
     if(['paused','lesson','inspection'].includes(state)||document.hidden)return;time+=dt;if(toastTime>0){toastTime-=dt;if(toastTime<=0)$('#toast').classList.remove('visible');}
     if(state==='incident'){deathTime-=dt;if(deathTime<=0)showLesson();return;}
     if(state==='dying'){deathTime-=dt;if(deathTime<=0){if(lives===0){finish(false);return;}player.x=crash.x-140;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;crash.hold=0;crash=null;state='playing';}return;}
     if(state!=='playing')return;
     updateWorkers(dt);
-    player.vx=(Number(keys.right)-Number(keys.left))*235;if(player.vx)player.face=Math.sign(player.vx);
+    player.vx=(Number(keys.right)-Number(keys.left))*300;if(player.vx)player.face=Math.sign(player.vx);
     const onStairs=stairAt(player.x+player.w/2);
     const besideStorage=!!onStairs||noJumpZones.some(p=>player.x+player.w>p.x&&player.x<p.x+p.w);
     if(keys.jump&&player.ground){
@@ -150,10 +159,11 @@
       if(!c.cleared&&player.x+player.w>c.x&&player.x<c.x+c.w){hit(c);break;}
     }
     if(state==='playing'&&sector===1){const next=incidentScenarios.find(s=>!triggered.has(s.id)&&player.x>=s.x&&needsIncident(s));if(next)startIncident(next);}
+    if(state==='playing'&&player.vx>0){const missed=[...hazards,...workers].filter(item=>!item.reported&&!item.missed&&player.x+player.w>Math.min((item.type==='act'?item.max:item.x)+120,WORLD-60)).sort((a,b)=>(a.type==='act'?a.max:a.x)-(b.type==='act'?b.max:b.x))[0];if(missed)missObservation(missed);}
     if(state==='playing'&&player.x>=WORLD-player.w-22)advanceSector();
     camera=Math.max(0,Math.min(WORLD-W,player.x-W*.3));$('#zone').textContent='● SECTOR '+String(sector).padStart(2,'0')+' · NIVEL '+sector;
   }
-  function stopTime(){return Math.min(2.4,1.2+(sector-1)*.2);}
+  function stopTime(){return Math.min(1.6,.8+(sector-1)*.15);}
   function stopWidth(){return Math.max(65,115-(sector-1)*8);}
   function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
   function text(s,x,y,size=12,color='#25453b',align='left'){ctx.fillStyle=color;ctx.font='bold '+size+'px Arial';ctx.textAlign=align;ctx.fillText(s,x,y);}
@@ -163,7 +173,7 @@
   function forklift(x,y,dir=1){ctx.save();ctx.translate(x,y);ctx.scale(dir,1);rect(-53,-51,70,37,'#ffc600');rect(-56,-26,78,13,'#bc8730');rect(-12,-91,6,43,'#263d36');rect(31,-93,7,82,'#263d36');rect(-16,-96,57,6,'#263d36');rect(-6,-87,33,31,'#a4bbb18a');rect(42,-80,7,73,'#45534c');rect(44,-9,43,5,'#45534c');rect(8,-51,17,6,'#374a40');rect(12,-69,6,20,'#374a40');for(const xx of [-32,23]){ctx.fillStyle='#283c35';ctx.beginPath();ctx.arc(xx,-10,13,0,7);ctx.fill();ctx.fillStyle='#899483';ctx.beginPath();ctx.arc(xx,-10,6,0,7);ctx.fill();}rect(-5,-102,10,6,Math.sin(time*7)>0?'#ffce58':'#bc8730');ctx.restore();}
   function character(){
     ctx.save();ctx.translate(player.x+16,player.y+66);
-    const impact=state==='incident'&&deathTime<.8;
+    const impact=state==='incident'&&deathTime<.5;
     const crushed=state==='dying'||(impact&&incident.kind!=='foot');
     if(crushed){ctx.scale(1.8,.22);ctx.rotate(-.12);}
     if(impact&&incident.kind==='foot')ctx.rotate(Math.sin(time*22)*.16);
@@ -191,7 +201,7 @@
   }
   function drawIncident(){
     if(state!=='incident'||!incident)return;
-    const progress=Math.min(1,(1.8-deathTime)/1.1);
+    const progress=Math.min(1,(1.1-deathTime)/.7);
     if(incident.kind==='forklift'){
       forklift(player.x-190+progress*230,FLOOR,1);
       text(incident.id==='audio'?'♪  ♪   ¡BIP, BIP!':'¡NO TE VI!',player.x+30,player.y-47,15,'#ffe079','center');
@@ -262,13 +272,13 @@
     for(let i=-1;i<9;i++){const x=i*180-bg%180;rect(x,0,4,335,'#3a3a3a');rect(x+25,25,120,54,'#93938c');rect(x+28,29,114,45,'#b7b7a5');line(x+85,28,x+85,74,'#68685f',3);line(x+26,52,x+144,52,'#68685f',2);rect(x+42,96,89,5,'#242424');rect(x+57,101,59,4,'#f3efcf');}
     rect(0,303,W,143,'#66665e');rect(0,446,W,94,'#303030');ctx.save();ctx.translate(-camera,0);
     for(let r=0;r<Math.ceil(WORLD/292);r++){const x=80+r*292;rect(x,145,240,211,'#41413d');for(let level=0;level<3;level++){const y=177+level*61;for(let col=0;col<4;col++)box(x+13+col*55,y,48,40,level===1?'CERVEZA':'PREMIUM',r%2?'#b4a779':'#bab28a');rect(x,y+42,240,7,'#8b6949');}rect(x,142,9,218,'#242424');rect(x+231,142,9,218,'#242424');rect(x,140,240,10,'#242424');rect(x+92,143,56,18,'#ffc600');text('A – '+String(r+1).padStart(2,'0'),x+120,156,9,'#171717','center');}
-    rect(0,361,WORLD,4,'#222222');rect(0,451,WORLD,5,'#ffc600');rect(0,508,WORLD,5,'#ffc600');for(let x=80;x<WORLD;x+=250){text('→',x,493,39,'#ffc600');line(x+90,480,x+145,480,'#72726a',2);}
+    rect(0,361,WORLD,4,'#222222');rect(0,451,WORLD,5,'#ffc600');rect(0,508,WORLD,5,'#ffc600');for(let x=36;x<WORLD;x+=132)for(let stripe=0;stripe<5;stripe++)rect(x+stripe*12,468,7,29,'#ffc600');
     for(const p of storage){ctx.save();ctx.translate(0,-78);rect(p.x,p.y,p.w,p.h,'#a59363');for(let y=p.y;y<FLOOR-5;y+=29)for(let x=p.x;x<p.x+p.w-5;x+=36)box(x+2,y+2,32,25,'','#b8a577');rect(p.x-3,p.y,p.w+6,5,'#d2bf89');rect(p.x-3,FLOOR-7,p.w+6,7,'#756343');ctx.restore();}
     for(const c of crossings){rect(c.x-stopWidth(),FLOOR,stopWidth()-5,62,'#ffc600');text('ALTO',c.x-stopWidth()/2,482,15,'#181818','center');rect(c.x,353,c.w,166,'#242424');for(let y=367;y<511;y+=24)rect(c.x+8,y,c.w-16,12,'#eeeee5');line(c.x-3,351,c.x-3,519,'#ffc600',4);line(c.x+c.w+3,351,c.x+c.w+3,519,'#ffc600',4);rect(c.x-25,278,5,110,'#292929');rect(c.x-47,250,50,40,'#171717');text(c.cleared?'PASA':'ALTO',c.x-22,275,12,c.cleared?'#d7f365':'#ffc600','center');
       if(c.hold>0&&!c.cleared){rect(c.x-113,426,103,7,'#292929');rect(c.x-113,426,103*Math.min(1,c.hold/stopTime()),7,'#ffc600');}
       if(c.cleared){forklift(c.x+c.w-5,349,-1);text('DETENIDO',c.x+c.w-5,237,9,'#b7ea91','center');}else if(crash!==c)forklift(c.x+c.w/2+Math.sin(time*(1.5+Math.min(sector-1,10)*.3))*35,352,1);
     }
-    pallets.forEach(pallet);hazards.forEach(drawHazard);stairs.forEach(drawStairs);workers.forEach(drawWorker);character();drawIncident();if(state==='dying'&&crash)forklift(player.x-100+(1.6-deathTime)*165,FLOOR,1);
+    pallets.forEach(pallet);hazards.forEach(drawHazard);stairs.forEach(drawStairs);workers.forEach(drawWorker);character();drawIncident();if(state==='dying'&&crash)forklift(player.x-100+(.9-deathTime)*290,FLOOR,1);
     ctx.restore();
     ctx.restore();
     if(W>=440){rect(20,19,187,35,'#181818ec');text('RUTA PEATONAL',30,34,10,'#ffc600');text('ALMACÉN 07 / DISTRIBUCIÓN',30,47,8,'#e6e6dc');}rect(W-205,22,177,33,'#181818ec');text('DISTANCIA '+Math.floor(((sector-1)*WORLD+player.x)/50)+' m',W-194,35,8,'#ffc600');rect(W-194,43,154,3,'#5e5e56');rect(W-194,43,154*Math.min(1,player.x/(WORLD-70)),3,'#ffc600');
