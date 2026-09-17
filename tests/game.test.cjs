@@ -28,7 +28,7 @@ vm.runInContext(code,sandbox);
 const t=sandbox.test, $=s=>document.querySelector(s), step=(n=1)=>{for(let i=0;i<n;i++)t.update(1/60)};
 // The actual entry button accepts wrong and empty choices, and exclusive slots stay exclusive.
 assert.equal(t.state,'ready');$('#start-game').onclick();assert.equal(t.state,'equipment');$('#enter').onclick();assert.equal(t.state,'playing');
-assert.equal(t.runSpeed(),275);const runnerStart=t.player.x;step(20);assert(t.player.x>runnerStart,'runner should advance automatically');
+assert.equal(t.runSpeed(),275);const runnerStart=t.player.x;step(120);assert.equal(t.player.x,runnerStart,'opening preview should allow observation');step(50);assert(t.player.x>runnerStart,'runner should advance after the preview');
 t.keys.left=true;const brakePoint=t.player.x;step(10);assert.equal(t.player.x,brakePoint,'brake should stop the runner');
 t.keys.left=false;t.keys.right=true;step(5);assert(t.player.x>brakePoint+20,'accelerate should increase speed');assert.equal(t.epp,false);
 t.reset();$('#start-game').onclick();const buttons=$('.equipment').children;
@@ -56,7 +56,7 @@ t.hazards.forEach(h=>h.reported=true);t.workers.filter(w=>w!==missedAct).forEach
 t.crossings.forEach(c=>c.cleared=true);t.place(missedAct.max+110);t.keys.right=true;step();
 assert.equal(t.state,'lesson');assert.equal(t.lives,2);assert(missedAct.missed);assert($('#modal').innerHTML.includes(missedAct.title));
 $('#continue-miss').onclick();t.place(missedAct.x-16);t.interact();assert.equal(t.state,'inspection');
-$('.hazard-options').children[missedAct.answer].onclick();$('#continue').onclick();assert(missedAct.reported);
+$('.hazard-options').children[missedAct.answer].onclick();assert.equal(t.state,'playing');assert(missedAct.reported);
 // Optional airborne attention points reward timing without replacing safety objectives.
 t.reset();t.start();assert(t.focusTokens.length>0);const token=t.focusTokens[0];
 t.place(token.x-16,320);t.player.ground=false;step();
@@ -66,31 +66,39 @@ t.reset();t.start(['cap','sandals','headphones']);
 for(const x of [301,651,1121]){t.place(x);step();step(120);assert.equal(t.state,'lesson');$('#correct').onclick();}
 assert.equal(t.state,'lost');assert.equal(t.lives,0);
 const replayGear=[...t.worn].sort();$('#again').onclick();assert.equal(t.state,'playing');assert.equal(t.lives,3);assert.deepEqual([...t.worn].sort(),replayGear);
-const replayX=t.player.x;step(5);assert(t.player.x>replayX,'one-tap replay should resume automatic movement');
+const replayX=t.player.x;step(120);assert.equal(t.player.x,replayX);step(50);assert(t.player.x>replayX,'one-tap replay should resume after the preview');
 // Wrong answers do not report; a correct answer registers once and preserves lives.
 t.reset();t.start();t.place(t.hazards[0].x);t.interact();assert.equal(t.state,'inspection');
 $('.hazard-options').children[1].onclick();assert.equal(t.hazards[0].reported,false);assert.equal(t.lives,3);
-$('.hazard-options').children[0].onclick();assert.equal(t.hazards[0].reported,true);$('#continue').onclick();
+$('.hazard-options').children[0].onclick();assert.equal(t.hazards[0].reported,true);assert.equal(t.state,'playing');
 t.interact();assert.equal(t.state,'playing');assert.equal(t.hazards.filter(h=>h.reported).length,1);
 // No exit at the former door location.
 t.place(2500);t.interact();assert(t.found);t.crossings.forEach(c=>c.cleared=true);t.hud();t.place(4000);t.interact();assert.equal(t.state,'playing');
 // Flying Fish is a separate pallet objective and the new observations are present.
-t.reset();t.start();assert(t.hazards.some(h=>h.id==='leak'));assert(!t.hazards.some(h=>h.id==='bench'));
+t.reset();t.start();assert(Math.min(...t.hazards.map(h=>h.x),...t.workers.filter(w=>w.id!=='noHandrail').map(w=>w.min))>=425,'opening route should be clear');assert(t.hazards.some(h=>h.id==='leak'));assert(!t.hazards.some(h=>h.id==='bench'));
 assert(t.workers.some(w=>w.id==='noVest'));assert(t.workers.some(w=>w.id==='nearForklift'));
-t.place(1283);t.interact();assert(t.fishFound);assert.equal(t.totalFish,1);assert($('#progress').textContent.includes('DE 6'));
+t.place(1283);t.interact();assert(t.fishFound);assert.equal(t.totalFish,1);assert.equal(t.totalFish,1);
 // Coins on the safe route grant an extra life after five pickups.
 t.reset();t.start();const safeCoins=t.coins.filter(c=>!c.risky);assert(safeCoins.length>=5);
 for(const coin of safeCoins.slice(0,5)){t.place(coin.x-16);step();}
 assert.equal(t.totalCoins,5);assert.equal(t.lives,4);
 const risky=t.coins.find(c=>c.risky);assert(risky);assert(!risky.collected);
 t.crossings.forEach(c=>c.cleared=true);t.place(risky.x-16);step();assert(risky.collected);
+// A coin appears in the center of the crossing and expires after two seconds.
+t.reset();t.start();const timed=t.coins.find(c=>c.risky),cross=timed.crossing;
+assert.equal(timed.x,cross.x+cross.w/2);assert.equal(timed.active,false);
+t.place(cross.x-t.stopWidth()-45);step();assert(timed.active);assert(cross.coinTrap);
+step(65);assert(timed.expired);assert.equal(timed.active,false);assert.equal(cross.coinTrap,false);
+assert.equal(timed.collected,false);assert.equal(t.lives,3);assert.equal(t.state,'playing');
+t.reset();t.start();const safeTimed=t.coins.find(c=>c.risky),safeCross=safeTimed.crossing;
+t.place(safeCross.x-t.stopWidth()-16);step(65);assert(safeCross.cleared);assert(safeTimed.expired);assert.equal(t.lives,3);
 // Complete the full route, inspecting every condition through real answer handlers.
 t.reset();t.start();t.workers.forEach(w=>w.reported=true);let frames=0;
 while(t.sector===1&&frames++<5000){
  const p=t.player,c=t.crossings.find(c=>!c.cleared&&p.x+32>c.x-95&&p.x+32<=c.x);
  t.keys.right=!c;step();
  const h=t.hazards.find(h=>!h.reported&&Math.abs(p.x+16-h.x)<65);
- if(h){t.interact();assert.equal(t.state,'inspection');$('.hazard-options').children[h.answer].onclick();$('#continue').onclick();}
+ if(h){t.interact();assert.equal(t.state,'inspection');$('.hazard-options').children[h.answer].onclick();assert.equal(t.state,'playing');}
  if(p.x>2470&&!t.found)t.interact();assert.equal(t.state,'playing');
 }
 assert(frames<5000);assert.equal(t.sector,2);assert.equal(t.totalReports,5);assert.equal(t.totalPallets,1);assert.equal(t.completedStairs,1);assert(t.lives>=3&&t.lives<=5);assert.equal(t.state,'playing');assert(t.hazards.every(h=>!h.reported));assert.equal(t.stairs.length,2);assert.equal(t.crossings.length,3);t.render();
@@ -111,7 +119,7 @@ while(t.sector<6&&limit++<15000){
  t.keys.right=!c;step();maxHeight=Math.max(maxHeight,380-p.y);
  assert.equal(t.state,'playing','Continuous safe route must remain traversable');
 }
-assert(limit<15000);assert.equal(t.sector,6);assert.equal(t.runSpeed(),335);assert(maxHeight>=135);assert.equal(t.completedStairs,9);assert(t.lives>=3&&t.lives<=5);assert.equal(t.crossings.length,4);assert(t.stopTime()>1.2);assert(t.stopWidth()<115);
+assert(limit<15000);assert.equal(t.sector,6);assert.equal(t.runSpeed(),385);assert(maxHeight>=135);assert.equal(t.completedStairs,9);assert(t.lives>=3&&t.lives<=5);assert.equal(t.crossings.length,4);assert(t.stopTime()>1.2);assert(t.stopWidth()<115);
 // Cannot jump over the staircase entrance or jump from its upper walkway.
 t.reset();t.start();const stair=t.stairs[0];t.place(stair.x-17,270);t.player.ground=false;t.keys.right=true;step();assert(t.player.x+16<stair.x);
 t.place(stair.x+stair.steps*stair.tread+30,t.floorAt(stair.x+stair.steps*stair.tread+46)-66);t.keys.jump=true;step();assert(t.player.ground);assert.equal(t.player.vy,0);
@@ -121,11 +129,11 @@ console.log('PASS: five endless sectors, cumulative counters, increased crossing
 t.reset();t.start();const worker=t.workers[0];const initialX=worker.x;step(30);assert.notEqual(worker.x,initialX);
 t.place(worker.x-16,worker.feet-66);t.interact();assert.equal(t.state,'inspection');
 $('.hazard-options').children[(worker.answer+1)%3].onclick();assert.equal(t.totalActs,0);assert(!worker.reported);
-$('.hazard-options').children[worker.answer].onclick();assert.equal(t.totalActs,1);assert.equal(t.totalReports,0);assert(worker.reported);$('#continue').onclick();
+$('.hazard-options').children[worker.answer].onclick();assert.equal(t.totalActs,1);assert.equal(t.totalReports,0);assert(worker.reported);assert.equal(t.state,'playing');
 t.interact();assert.equal(t.state,'playing');assert.equal(t.totalActs,1);
 const stairWorker=t.workers.find(w=>w.id==='noHandrail');t.place(stairWorker.x-16,stairWorker.feet-66);t.interact();assert.equal(t.state,'inspection');
 const frozenX=stairWorker.x;step(90);assert.equal(stairWorker.x,frozenX);
-$('.hazard-options').children[stairWorker.answer].onclick();$('#continue').onclick();assert.equal(t.totalActs,2);assert.equal(t.totalReports,0);t.render();
+$('.hazard-options').children[stairWorker.answer].onclick();assert.equal(t.state,'playing');assert.equal(t.totalActs,2);assert.equal(t.totalReports,0);t.render();
 // Reports survive sector changes; new people are reportable and full reset clears the totals.
 t.hazards.forEach(h=>h.reported=true);t.workers.forEach(w=>w.reported=true);t.place(4960);t.keys.right=true;step(10);assert.equal(t.sector,2);assert.equal(t.totalActs,2);assert(t.workers.every(w=>!w.reported));
 t.keys.right=false;const climber=t.workers.find(w=>w.id==='noHandrail');let low=climber.feet,high=climber.feet;for(let i=0;i<600;i++){step();low=Math.min(low,climber.feet);high=Math.max(high,climber.feet);}assert(high-low>60,'Worker visibly climbs and descends');

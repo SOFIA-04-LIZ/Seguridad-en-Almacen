@@ -12,7 +12,7 @@ Abre `index.html` en un navegador moderno. No requiere instalación ni servidor.
 
 ## Pantallas de celular
 
-La interfaz se adapta a orientación vertical y horizontal, con botones táctiles de al menos 44 píxeles, cuadros de preguntas desplazables y espacio para las áreas seguras del dispositivo. El instructivo y los objetivos aparecen antes del escenario. La bienvenida y el botón de inicio aparecen dentro del escenario; al pulsarlo se abre allí la selección de EPP. Al confirmar el equipo comienza el recorrido. Girar la pantalla ajusta la cámara y la resolución sin reiniciar la partida.
+La interfaz se adapta a orientación vertical y horizontal, con botones táctiles de al menos 44 píxeles, cuadros de preguntas desplazables y espacio para las áreas seguras del dispositivo. El instructivo aparece antes del escenario. La bienvenida y el botón de inicio aparecen dentro del escenario; al pulsarlo se abre allí la selección de EPP. Al confirmar el equipo hay 2.5 segundos para observar el escenario antes de que empiece el avance automático. Girar la pantalla ajusta la cámara y la resolución sin reiniciar la partida.
 
 Se verificaron en Chrome nueve tamaños: 320×568, 360×640, 390×844, 430×932, 568×320, 667×375, 844×390, 932×430 y 768×1024. La comprobación está en `tests/mobile.html`; para ejecutarla, sirve la carpeta con un servidor local y abre esa página. Comprueba desbordamientos, cuadros, controles y altura del juego.
 
@@ -32,7 +32,7 @@ Al llegar al extremo del sector se genera el siguiente y el personaje continúa 
 
 El personaje avanza automáticamente y acelera en sectores posteriores; una racha aumenta al cruzar con seguridad, registrar Stella o Flying Fish, reportar observaciones y completar escaleras. También hay puntos de atención opcionales para recoger saltando en espacios libres. Al terminar, se puede reintentar de inmediato con el mismo EPP o cambiarlo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
 
-Los contadores acumulan tarimas de Stella y Flying Fish, monedas, condiciones reportadas, actos inseguros reportados y escaleras recorridas. Cinco monedas recogidas en la ruta segura dan una vida adicional. Las monedas tentadoras dentro de dos cruces solo se pueden recoger tras esperar la señal; entrar por ella antes de tiempo cuesta una vida y muestra una explicación. Cada sector renueva sus objetos y reportes; las condiciones que se dejaron atrás sin reportar no suman puntos. Los seis objetivos del panel corresponden al sector actual.
+Los contadores acumulan tarimas de Stella y Flying Fish, monedas, condiciones reportadas, actos inseguros reportados y escaleras recorridas. Cinco monedas recogidas en la ruta segura dan una vida adicional. Las monedas tentadoras aparecen en el centro de dos cruces al acercarse y desaparecen después de un segundo. El tiempo restante se muestra con números negros sobre un recuadro amarillo. Solo se pueden recoger tras esperar la señal; entrar por ella antes de tiempo cuesta una vida y muestra una explicación. Cada sector renueva sus objetos y reportes; las condiciones que se dejaron atrás sin reportar no suman puntos. Los seis objetivos de seguridad se mantienen en cada sector sin un panel de tarjetas.
 
 La dificultad aumenta de forma gradual:
 
@@ -69,7 +69,7 @@ Cada sector incorpora cuatro personas animadas:
 - Otra se acerca demasiado a un montacargas en movimiento.
 - Otra sube y baja por la escalera con las manos junto al cuerpo, sin sujetarse del pasamanos.
 
-El jugador puede acercarse e interactuar con E para identificar la conducta entre tres opciones. La interacción toma en cuenta la posición y la altura de la persona. Las escenas se detienen mientras se responde. Una respuesta incorrecta permite reintentar sin perder vidas; la correcta suma una sola vez al contador ACTOS y muestra una explicación.
+El jugador puede acercarse e interactuar con E para identificar la conducta entre tres opciones. La interacción toma en cuenta la posición y la altura de la persona. Las escenas se detienen mientras se responde. Una respuesta incorrecta permite reintentar sin perder vidas; la correcta suma una sola vez al contador ACTOS y confirma el reporte sin interrumpir el recorrido.
 
 Los actos se contabilizan por separado de las condiciones del entorno. Cada sector genera personas nuevas para observar y conserva los totales de la partida. Antes de reportar no hay marcadores ni avisos encima de las personas. El personaje del jugador extiende una mano hacia el pasamanos al recorrer las escaleras.
 

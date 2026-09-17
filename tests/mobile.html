@@ -19,10 +19,8 @@ frame.onload=async()=>{
  check(parseFloat(win.getComputedStyle(doc.querySelector('.setup p:not(.eyebrow)')).fontSize)>=(width<=700?14:16),'instructions too small');
  check(doc.querySelector('#overlay').classList.contains('ready'),'welcome must appear in game');
  check(win.getComputedStyle(doc.querySelector('#overlay')).position==='absolute','welcome must stay in scenario');
- check(box('.setup').bottom<=box('.objectives').top+1,'objectives must follow instructions');
- check(box('.objectives').bottom<=box('.game-shell').top+1,'objectives must precede the game');
- check(win.getComputedStyle(doc.querySelector('.cards')).gridTemplateColumns.split(' ').length===3,'objectives must show three columns');
- check(doc.querySelectorAll('.cards article').length===6,'six objectives must be visible');
+ check(box('.setup').bottom<=box('.game-shell').top+1,'instructions must precede the game');
+ check(!doc.querySelector('.objectives'),'old objective cards remain');
  check(box('.header-note').right<=width+1,'header note clipped');
  check(!doc.querySelector('#act-list')&&!doc.querySelector('#hazard-list'),'extra status chips visible');
  check(doc.documentElement.scrollWidth<=width+1,'horizontal page overflow');

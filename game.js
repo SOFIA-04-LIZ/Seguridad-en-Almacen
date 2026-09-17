@@ -5,7 +5,7 @@
   let W=1200,viewHeight=H;
   const baseStorage=[{x:410,y:391,w:105,h:55},{x:565,y:350,w:110,h:96},{x:1360,y:392,w:105,h:54},{x:1510,y:345,w:110,h:101},{x:2200,y:390,w:110,h:56}];
   const baseCrossings=[{x:880,w:170,cleared:false,hold:0},{x:1830,w:170,cleared:false,hold:0}];
-  const basePallets=[{x:1230,brand:'FLYING FISH',color:'#4b9cb1'},{x:2500,brand:'STELLA',color:'#aa4237'},{x:2840,brand:'MODELO',color:'#405e6b'}];
+  const basePallets=[{x:1230,brand:'FLYING FISH',color:'#4b9cb1'},{x:2500,brand:'STELLA',color:'#aa4237'}];
   const equipment=[['helmet','⛑️','Casco de seguridad',true],['vest','🦺','Chaleco de alta visibilidad',true],['boots','🥾','Botas de seguridad',true],['sandals','🩴','Sandalias',false],['cap','🧢','Gorra',false],['headphones','🎧','Audífonos de música',false]];
   const incidentScenarios=window.WAREHOUSE_SCENARIOS.equipment;
   const storage=[],crossings=[],pallets=[],hazards=[],workers=[],stairs=[],noJumpZones=[],focusTokens=[],coins=[];
@@ -16,7 +16,7 @@
   function shuffle(items){const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
   function randomLocations(){
     // Ground bays have space for an object or a short patrol, away from crossings and stairs.
-    const bays=[250,460,1150,1500,2120,2700,3100,4880];
+    const bays=[460,1150,1500,2120,2700,2900,3100,4880];
     const ids=[...window.WAREHOUSE_SCENARIOS.hazards.map(h=>h.id),...window.WAREHOUSE_SCENARIOS.acts.filter(a=>a.id!=='noHandrail').map(a=>a.id)];
     function assign(index,available,result){
       if(index===ids.length)return result;
@@ -37,7 +37,7 @@
     if(sector>=2)crossings.push({x:700,w:130,hold:0,cleared:false});
     if(sector>=4)crossings.push({x:2350,w:140,hold:0,cleared:false});
     pallets.splice(0,pallets.length,...basePallets.map(p=>({...p,registered:false})));
-    const trapCrossings=[...crossings].sort((a,b)=>a.x-b.x).slice(0,2);trapCrossings.forEach(c=>c.coinTrap=true);
+    const trapCrossings=[...crossings].sort((a,b)=>a.x-b.x).slice(0,2);trapCrossings.forEach(c=>c.coinTrap=false);
     const locations=randomLocations();
     hazards.splice(0,hazards.length,...window.WAREHOUSE_SCENARIOS.hazards.map(h=>({...h,x:locations.get(h.id),reported:false,missed:false})));
     // Move decorative stock out of the observation bays so people and conditions remain visible.
@@ -62,7 +62,7 @@
       stairs.every(st=>x<st.x-70||x>st.x+stairWidth(st)+70));
     focusTokens.splice(0,focusTokens.length,...shuffle(tokenSpots).slice(0,Math.min(3,tokenSpots.length)).map(x=>({x,y:350,collected:false})));
     const safeSpots=[];for(let x=190;x<WORLD-90;x+=165){if(noJumpZones.some(z=>x>z.x-55&&x<z.x+z.w+55)||crossings.some(c=>x>c.x-stopWidth()-45&&x<c.x+c.w+45)||stairs.some(st=>x>st.x-50&&x<st.x+stairWidth(st)+50)||workers.some(w=>w.id!=='noHandrail'&&x>w.min-65&&x<w.max+65))continue;safeSpots.push(x);}
-    coins.splice(0,coins.length,...safeSpots.map(x=>({x,y:400,collected:false,risky:false})),...trapCrossings.map(c=>({x:c.x+24,y:400,collected:false,risky:true,crossing:c})));
+    coins.splice(0,coins.length,...safeSpots.map(x=>({x,y:400,collected:false,risky:false})),...trapCrossings.map(c=>({x:c.x+c.w/2,y:400,collected:false,risky:true,crossing:c,active:false,expired:false,timeLeft:1})));
   }
   function stairWidth(s){return s.steps*s.tread*2+s.deck;}
   function stairAt(x){return stairs.find(s=>x>=s.x&&x<=s.x+stairWidth(s));}
@@ -71,18 +71,17 @@
 
   let worn=new Set(), incident=null, triggered=new Set();
 
-  let autoRun=false,streak=0;
+  let autoRun=false,streak=0,startDelay=0;
   let state='ready',player,lives=3,found=false,fishFound=false,epp=false,camera=0,time=0,last=0,toastTime=0,deathTime=0,crash=null;
   function clearKeys(){keys.left=keys.right=keys.jump=false;}
   function toast(message,seconds=4){$('#toast').textContent=message;$('#toast').classList.add('visible');toastTime=seconds;}
   function hud(){
-    $('#lives').textContent='♥ '.repeat(lives)+'♡ '.repeat(MAX_LIVES-lives);$('#lives').setAttribute('aria-label',lives+' vidas');$('#life-number').textContent=lives+'/'+MAX_LIVES;$('#count').textContent=totalPallets;$('#fish-count').textContent=totalFish;$('#coin-count').textContent=totalCoins;$('#sector').textContent=sector;$('#stair-count').textContent=completedStairs;
+    $('#lives').textContent='♥ '.repeat(lives)+'♡ '.repeat(MAX_LIVES-lives);$('#lives').setAttribute('aria-label',lives+' vidas');$('#life-number').textContent=lives+'/'+MAX_LIVES;$('#count').textContent=totalPallets;$('#fish-count').textContent=totalFish;$('#coin-count').textContent=totalCoins;$('#sector').textContent=sector;
     epp=worn.has('helmet')&&worn.has('vest')&&worn.has('boots')&&!worn.has('headphones')&&!worn.has('cap')&&!worn.has('sandals');
-    const reports=hazards.filter(h=>h.reported).length;
     $('#hazard-count').textContent=totalReports;$('#act-count').textContent=totalActs;$('#streak').textContent=streak;
-    const done=[epp,crossings.every(c=>c.cleared),found,fishFound,reports===hazards.length,workers.every(a=>a.reported)];['epp','cross','stella','fish','hazards','acts'].forEach((id,i)=>{const el=$('#obj-'+id);el.classList.toggle('done',done[i]);el.querySelector('span').textContent=done[i]?'✓':'↗';});$('#progress').textContent=done.filter(Boolean).length+' DE 6 COMPLETADOS';
+
   }
-  function reset(){sector=1;totalReports=totalPallets=totalFish=totalCoins=coinsTowardLife=completedStairs=totalActs=0;buildSector();worn=new Set();triggered=new Set();incident=null;hazards.forEach(h=>h.reported=false);lives=3;streak=0;autoRun=false;found=fishFound=epp=false;camera=0;crash=null;deathTime=0;player={x:110,y:FLOOR-66,w:32,h:66,vx:0,vy:0,ground:true,face:1};crossings.forEach(c=>{c.cleared=false;c.hold=0;});clearKeys();$('#toast').classList.remove('visible');$('#zone').textContent='● ACCESO AL ALMACÉN';hud();showWelcome();}
+  function reset(){sector=1;totalReports=totalPallets=totalFish=totalCoins=coinsTowardLife=completedStairs=totalActs=0;buildSector();worn=new Set();triggered=new Set();incident=null;hazards.forEach(h=>h.reported=false);lives=3;streak=0;autoRun=false;startDelay=0;found=fishFound=epp=false;camera=0;crash=null;deathTime=0;player={x:110,y:FLOOR-66,w:32,h:66,vx:0,vy:0,ground:true,face:1};crossings.forEach(c=>{c.cleared=false;c.hold=0;});clearKeys();$('#toast').classList.remove('visible');$('#zone').textContent='● ACCESO AL ALMACÉN';hud();showWelcome();}
   function showWelcome(){
     state='ready';$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#overlay').classList.add('ready');
     $('#modal').innerHTML='<p class="eyebrow">INICIO DEL RECORRIDO</p><h2>¿Ya quieres iniciar el juego?</h2><p>Primero elegirás tu EPP. Después comenzará el recorrido por el almacén.</p><button class="primary" id="start-game">Sí, elegir mi EPP →</button>';
@@ -92,7 +91,7 @@
     state='equipment';$('#pause').disabled=true;$('#overlay').classList.remove('ready');$('#overlay').classList.remove('hidden');document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});
     $('#modal').innerHTML='<p class="eyebrow">ANTES DE ENTRAR / 01</p><h2>La seguridad empieza contigo.</h2><p>Elige cómo entrar al almacén. <b>Jugarás con lo que selecciones</b>, aunque sea incorrecto. Las decisiones inseguras activan incidentes, restan una vida y explican qué debes corregir.</p><div class="equipment"></div><p class="feedback" role="status"></p><button class="primary" id="enter">Comenzar recorrido con mi elección →</button><p class="tiny">El personaje avanza solo. Frena con ← para observar y detenerte en los cruces; acelera con →. Salta con espacio e inspecciona con E.</p>';
     const selected=new Set();equipment.forEach(([id,icon,name])=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed','false');b.innerHTML='<span>'+icon+'</span>'+name;b.dataset.equipment=id;b.onclick=()=>{if(selected.has(id))selected.delete(id);else{const opposite={helmet:'cap',cap:'helmet',boots:'sandals',sandals:'boots'}[id];if(opposite)selected.delete(opposite);selected.add(id);}document.querySelectorAll('[data-equipment]').forEach(button=>button.setAttribute('aria-pressed',String(selected.has(button.dataset.equipment))));};$('.equipment').append(b);});
-    $('#enter').onclick=()=>{worn=new Set(selected);autoRun=true;state='playing';clearKeys();$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};
+    $('#enter').onclick=()=>{worn=new Set(selected);autoRun=true;startDelay=2.5;state='playing';clearKeys();$('#overlay').classList.add('hidden');toast('Observa el almacén antes de avanzar.',2.5);$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};
   }
   function missObservation(item){
     item.missed=true;lives--;streak=0;state='lesson';clearKeys();$('#pause').disabled=true;hud();$('#overlay').classList.remove('hidden');
@@ -112,13 +111,13 @@
     const isAct=h.type==='act';
     state='inspection';clearKeys();$('#pause').disabled=true;$('#overlay').classList.remove('hidden');
     $('#modal').innerHTML='<p class="eyebrow">OBSERVA · IDENTIFICA · REPORTA</p><h2>¿Qué '+(isAct?'acto':'condición')+' encontraste?</h2><p>Identifica lo que viste cerca de ti. Reporta desde una distancia segura.</p><div class="hazard-options"></div><p class="feedback" role="status"></p><button class="secondary" id="back">Volver a observar</button>';
-    h.choices.forEach((choice,i)=>{const b=document.createElement('button');b.textContent=choice;b.onclick=()=>{if(i!==h.answer){$('.feedback').textContent='Esa opción no corresponde a lo que estás observando. Revisa la escena y la acción de las personas.';return;}if(h.reported)return;h.reported=true;if(isAct)totalActs++;else totalReports++;streak++;hud();$('#modal').innerHTML='<p class="eyebrow">✓ '+(isAct?'ACTO REPORTADO':'CONDICIÓN REPORTADA')+'</p><h2>'+h.title+'</h2><p>'+h.explanation+'</p><p class="tiny">'+(isAct?'El reporte registra la conducta observada; no significa que ya se haya corregido.':'Reportar no elimina el peligro. Conserva distancia; su corrección corresponde al personal autorizado.')+'</p><button class="primary" id="continue">Continuar recorrido →</button>';$('#continue').onclick=closeInspection;};$('.hazard-options').append(b);});
+    h.choices.forEach((choice,i)=>{const b=document.createElement('button');b.textContent=choice;b.onclick=()=>{if(i!==h.answer){$('.feedback').textContent='Esa opción no corresponde a lo que estás observando. Revisa la escena y la acción de las personas.';return;}if(h.reported)return;h.reported=true;if(isAct)totalActs++;else totalReports++;streak++;hud();closeInspection();toast(isAct?'✓ Acto reportado':'✓ Condición reportada',2);};$('.hazard-options').append(b);});
     $('#back').onclick=closeInspection;
   }
   function closeInspection(){state='playing';clearKeys();$('#overlay').classList.add('hidden');$('#pause').disabled=false;}
 
   function pause(){if(state==='playing'){state='paused';clearKeys();$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">TOMA UN RESPIRO</p><h2>Turno en pausa.</h2><p>Sector '+sector+' · Recorrido continuo. La partida se conserva mientras está en pausa.</p><button class="primary" id="resume">Continuar misión →</button>';$('#resume').onclick=pause;}else if(state==='paused'){state='playing';$('#overlay').classList.add('hidden');}}
-  function finish(){state='lost';clearKeys();$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p>Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p><div class="result"><span>Sector: '+sector+'</span><span>Stella: '+totalPallets+'</span><span>Flying Fish: '+totalFish+'</span><span>Monedas: '+totalCoins+'</span><span>Reportes: '+totalReports+'</span><span>Actos: '+totalActs+'</span><span>Escaleras: '+completedStairs+'</span></div><button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button>';$('#again').onclick=()=>{const gear=new Set(worn);reset();worn=gear;autoRun=true;state='playing';$('#overlay').classList.remove('ready');$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};$('#change-epp').onclick=()=>{reset();showEquipment();};}
+  function finish(){state='lost';clearKeys();$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p>Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p><div class="result"><span>Sector: '+sector+'</span><span>Stella: '+totalPallets+'</span><span>Flying Fish: '+totalFish+'</span><span>Monedas: '+totalCoins+'</span><span>Reportes: '+totalReports+'</span><span>Actos: '+totalActs+'</span><span>Escaleras: '+completedStairs+'</span></div><button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button>';$('#again').onclick=()=>{const gear=new Set(worn);reset();worn=gear;autoRun=true;startDelay=2.5;state='playing';toast('Observa el almacén antes de avanzar.',2.5);$('#overlay').classList.remove('ready');$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};$('#change-epp').onclick=()=>{reset();showEquipment();};}
   function interact(){
     if(state!=='playing')return;
     const h=[...hazards,...workers].filter(h=>!h.reported&&Math.abs(player.x+16-h.x)<90&&player.ground&&Math.abs(player.y+player.h-(h.feet??FLOOR))<85).sort((a,b)=>Math.abs(player.x+16-a.x)-Math.abs(player.x+16-b.x))[0];
@@ -136,7 +135,7 @@
   window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA'].includes(e.code))keys.left=false;if(['ArrowRight','KeyD'].includes(e.code))keys.right=false;if(['Space','ArrowUp','KeyW'].includes(e.code))keys.jump=false;});
   window.addEventListener('blur',()=>{clearKeys();if(state==='playing')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')pause();});
   document.querySelectorAll('[data-key]').forEach(b=>{const key=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);if(state!=='playing')return;if(key==='interact')interact();else keys[key]=true;});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>{if(key!=='interact')keys[key]=false;}));});
-  function collectCoin(coin){coin.collected=true;totalCoins++;coinsTowardLife++;streak++;if(coinsTowardLife>=5){coinsTowardLife=0;if(lives<MAX_LIVES){lives++;toast('¡Cinco monedas seguras! +1 vida',3);}else toast('¡Cinco monedas seguras! Vida al máximo',3);}hud();}
+  function collectCoin(coin){coin.collected=true;if(coin.risky)coin.crossing.coinTrap=false;totalCoins++;coinsTowardLife++;streak++;if(coinsTowardLife>=5){coinsTowardLife=0;if(lives<MAX_LIVES){lives++;toast('¡Cinco monedas seguras! +1 vida',3);}else toast('¡Cinco monedas seguras! Vida al máximo',3);}hud();}
   function hit(c){lives--;streak=0;state='dying';deathTime=.9;crash=c;clearKeys();hud();toast(c.coinTrap?'¡Alto! Una moneda no vale tu vida. −1 vida.':'¡Alto! Cruzaste sin detenerte. −1 vida.',3);}
   function showCoinLesson(){state='lesson';player.x=crash.x-140;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;crash.hold=0;crash=null;$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">DECISIÓN INSEGURA · −1 VIDA</p><h2>Una moneda no vale tu vida.</h2><p>Entraste al cruce por una moneda sin esperar la señal. Un montacargas puede aparecer: por una moneda tu vida puede acabar. Cuídate. Detente, observa y cruza solo cuando sea seguro.</p><button class="primary" id="after-coin">'+(lives?'Entendido, continuar →':'Ver resultado →')+'</button>';$('#after-coin').onclick=()=>{if(!lives){finish();return;}state='playing';$('#overlay').classList.add('hidden');};}
   function update(dt){
@@ -144,6 +143,7 @@
     if(state==='incident'){deathTime-=dt;if(deathTime<=0)showLesson();return;}
     if(state==='dying'){deathTime-=dt;if(deathTime<=0){if(crash.coinTrap){showCoinLesson();return;}if(lives===0){finish(false);return;}player.x=crash.x-140;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;crash.hold=0;crash=null;state='playing';}return;}
     if(state!=='playing')return;
+    if(startDelay>0){startDelay=Math.max(0,startDelay-dt);player.vx=0;return;}
     updateWorkers(dt);
     player.vx=autoRun?(keys.left?0:runSpeed()+(keys.right?90:0)):(Number(keys.right)-Number(keys.left))*300;if(player.vx)player.face=Math.sign(player.vx);
     const onStairs=stairAt(player.x+player.w/2);
@@ -178,7 +178,7 @@
       player.vy+=1450*dt;player.y+=player.vy*dt;player.ground=false;
       if(player.y+player.h>=surface){player.y=surface-player.h;player.vy=0;player.ground=true;}
     }
-    for(const coin of coins){if(!coin.collected&&(!coin.risky||coin.crossing.cleared)&&player.ground&&Math.abs(player.x+player.w/2-coin.x)<23&&player.y+player.h>=FLOOR-5)collectCoin(coin);}
+    for(const coin of coins){if(coin.risky&&!coin.active&&!coin.expired&&player.x+player.w>coin.crossing.x-stopWidth()-25){coin.active=true;coin.crossing.coinTrap=true;}if(coin.risky&&coin.active&&!coin.collected){coin.timeLeft-=dt;if(coin.timeLeft<=0){coin.expired=true;coin.active=false;coin.crossing.coinTrap=false;}}if(!coin.collected&&(!coin.risky||coin.active)&&(!coin.risky||coin.crossing.cleared)&&player.ground&&Math.abs(player.x+player.w/2-coin.x)<23&&player.y+player.h>=FLOOR-5)collectCoin(coin);}
     for(const token of focusTokens){if(!token.collected&&Math.abs(player.x+player.w/2-token.x)<24&&player.y<token.y+12&&player.y+player.h>token.y-12){token.collected=true;streak++;hud();toast('Punto de atención · racha '+streak,2);}}
     for(const c of crossings){if(c.cleared)continue;const inStop=player.x+player.w>c.x-stopWidth()&&player.x+player.w<=c.x&&player.ground&&player.y+player.h>=FLOOR-1;
       if(inStop&&player.vx===0){c.hold+=dt;if(c.hold>=stopTime()){c.cleared=true;streak++;hud();}}else c.hold=0;
@@ -189,7 +189,7 @@
     if(state==='playing'&&player.x>=WORLD-player.w-22)advanceSector();
     camera=Math.max(0,Math.min(WORLD-W,player.x-W*.3));$('#zone').textContent='● SECTOR '+String(sector).padStart(2,'0')+' · NIVEL '+sector;
   }
-  function runSpeed(){return 275+Math.min(140,(sector-1)*12);}
+  function runSpeed(){return 275+Math.min(220,(sector-1)*22);}
   function stopTime(){return Math.min(1.6,.8+(sector-1)*.15);}
   function stopWidth(){return Math.max(65,115-(sector-1)*8);}
   function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
@@ -306,7 +306,7 @@
       if(c.hold>0&&!c.cleared){rect(c.x-113,426,103,7,'#292929');rect(c.x-113,426,103*Math.min(1,c.hold/stopTime()),7,'#ffc600');}
       if(c.cleared){forklift(c.x+c.w-5,349,-1);text('DETENIDO',c.x+c.w-5,237,9,'#b7ea91','center');}else if(crash!==c)forklift(c.x+c.w/2+Math.sin(time*(1.5+Math.min(sector-1,10)*.3))*35,352,1);
     }
-    for(const coin of coins){if(coin.collected)continue;ctx.fillStyle=coin.risky?'#ffdd52':'#ffd537';ctx.beginPath();ctx.arc(coin.x,coin.y,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle=coin.risky?'#ad3e27':'#fff2b2';ctx.lineWidth=3;ctx.stroke();text('$',coin.x,coin.y+5,15,'#6c4c00','center');}
+    for(const coin of coins){if(coin.collected||(coin.risky&&!coin.active))continue;ctx.fillStyle=coin.risky?'#ffdd52':'#ffd537';ctx.beginPath();ctx.arc(coin.x,coin.y,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle=coin.risky?'#ad3e27':'#fff2b2';ctx.lineWidth=3;ctx.stroke();text('$',coin.x,coin.y+5,15,'#6c4c00','center');if(coin.risky){rect(coin.x-40,coin.y-59,80,30,'#ffc600');text(Math.max(0,coin.timeLeft).toFixed(1)+' s',coin.x,coin.y-38,19,'#111111','center');}}
     for(const token of focusTokens){if(token.collected)continue;ctx.save();ctx.translate(token.x,token.y);ctx.rotate(time*2);rect(-9,-9,18,18,'#ffc600');rect(-5,-5,10,10,'#fff0a0');ctx.restore();}
     pallets.forEach(pallet);hazards.forEach(drawHazard);stairs.forEach(drawStairs);workers.filter(w=>w.id==='nearForklift').forEach(w=>forklift(w.x+100,FLOOR,-1));workers.forEach(drawWorker);character();drawIncident();if(state==='dying'&&crash)forklift(player.x-100+(.9-deathTime)*290,FLOOR,1);
     ctx.restore();
