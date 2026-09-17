@@ -8,7 +8,7 @@
   const basePallets=[{x:1230,brand:'CORONA',color:'#d8b85d'},{x:2500,brand:'STELLA',color:'#aa4237'},{x:2840,brand:'MODELO',color:'#405e6b'}];
   const equipment=[['helmet','⛑️','Casco de seguridad',true],['vest','🦺','Chaleco de alta visibilidad',true],['boots','🥾','Botas de seguridad',true],['sandals','🩴','Sandalias',false],['cap','🧢','Gorra',false],['headphones','🎧','Audífonos de música',false]];
   const incidentScenarios=window.WAREHOUSE_SCENARIOS.equipment;
-  const storage=[],crossings=[],pallets=[],hazards=[],workers=[],stairs=[],noJumpZones=[];
+  const storage=[],crossings=[],pallets=[],hazards=[],workers=[],stairs=[],noJumpZones=[],focusTokens=[];
   let sector=1,totalReports=0,totalPallets=0,completedStairs=0,totalActs=0;
   const previousLocations=new Map();
   let previousStairRoute='';
@@ -53,14 +53,20 @@
       return {...a,type:'act',reported:false,missed:false,min,max,x,feet:a.id==='noHelmet'?FLOOR:floorAt(x),direction:Math.random()<.5?-1:1,phase:Math.random()*Math.PI*2};
     }));
     noJumpZones.splice(0,noJumpZones.length,...storage.map(p=>({x:p.x-8,w:p.w+16})),...pallets.map(p=>({x:p.x-10,w:124})),...hazards.map(h=>({x:h.x-48,w:96})));
+    const tokenSpots=[560,780,1180,1750,2260,2680,3130,4180,4590].filter(x=>
+      noJumpZones.every(z=>x<z.x-70||x>z.x+z.w+70)&&
+      crossings.every(c=>x<c.x-stopWidth()-70||x>c.x+c.w+70)&&
+      stairs.every(st=>x<st.x-70||x>st.x+stairWidth(st)+70));
+    focusTokens.splice(0,focusTokens.length,...shuffle(tokenSpots).slice(0,Math.min(3,tokenSpots.length)).map(x=>({x,y:350,collected:false})));
   }
   function stairWidth(s){return s.steps*s.tread*2+s.deck;}
   function stairAt(x){return stairs.find(s=>x>=s.x&&x<=s.x+stairWidth(s));}
   function floorAt(x){const s=stairAt(x);if(!s)return FLOOR;const offset=x-s.x,run=s.steps*s.tread;const n=offset<run?Math.floor(offset/s.tread)+1:offset<run+s.deck?s.steps:Math.max(0,Math.ceil((stairWidth(s)-offset)/s.tread));return FLOOR-n*s.rise;}
-  function advanceSector(){sector++;found=false;buildSector();player.x=30;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;camera=0;hud();}
+  function advanceSector(){sector++;found=false;buildSector();player.x=30;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;camera=0;hud();toast('Sector '+sector+' · ¡El ritmo aumenta!',2);}
 
   let worn=new Set(), incident=null, triggered=new Set();
 
+  let autoRun=false,streak=0;
   let state='ready',player,lives=3,found=false,epp=false,camera=0,time=0,last=0,toastTime=0,deathTime=0,crash=null;
   function clearKeys(){keys.left=keys.right=keys.jump=false;}
   function toast(message,seconds=4){$('#toast').textContent=message;$('#toast').classList.add('visible');toastTime=seconds;}
@@ -68,10 +74,10 @@
     $('#lives').textContent='♥ '.repeat(lives)+'♡ '.repeat(3-lives);$('#lives').setAttribute('aria-label',lives+' vidas');$('#count').textContent=totalPallets;$('#sector').textContent=sector;$('#stair-count').textContent=completedStairs;
     epp=worn.has('helmet')&&worn.has('vest')&&worn.has('boots')&&!worn.has('headphones')&&!worn.has('cap')&&!worn.has('sandals');
     const reports=hazards.filter(h=>h.reported).length;
-    $('#hazard-count').textContent=totalReports;$('#act-count').textContent=totalActs;
+    $('#hazard-count').textContent=totalReports;$('#act-count').textContent=totalActs;$('#streak').textContent=streak;
     const done=[epp,crossings.every(c=>c.cleared),found,reports===hazards.length,workers.every(a=>a.reported)];['epp','cross','stella','hazards','acts'].forEach((id,i)=>{const el=$('#obj-'+id);el.classList.toggle('done',done[i]);el.querySelector('span').textContent=done[i]?'✓':'↗';});$('#progress').textContent=done.filter(Boolean).length+' DE 5 COMPLETADOS';
   }
-  function reset(){sector=1;totalReports=totalPallets=completedStairs=totalActs=0;buildSector();worn=new Set();triggered=new Set();incident=null;hazards.forEach(h=>h.reported=false);lives=3;found=epp=false;camera=0;crash=null;deathTime=0;player={x:110,y:FLOOR-66,w:32,h:66,vx:0,vy:0,ground:true,face:1};crossings.forEach(c=>{c.cleared=false;c.hold=0;});clearKeys();$('#toast').classList.remove('visible');$('#zone').textContent='● ACCESO AL ALMACÉN';hud();showWelcome();}
+  function reset(){sector=1;totalReports=totalPallets=completedStairs=totalActs=0;buildSector();worn=new Set();triggered=new Set();incident=null;hazards.forEach(h=>h.reported=false);lives=3;streak=0;autoRun=false;found=epp=false;camera=0;crash=null;deathTime=0;player={x:110,y:FLOOR-66,w:32,h:66,vx:0,vy:0,ground:true,face:1};crossings.forEach(c=>{c.cleared=false;c.hold=0;});clearKeys();$('#toast').classList.remove('visible');$('#zone').textContent='● ACCESO AL ALMACÉN';hud();showWelcome();}
   function showWelcome(){
     state='ready';$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#overlay').classList.add('ready');
     $('#modal').innerHTML='<p class="eyebrow">INICIO DEL RECORRIDO</p><h2>¿Ya quieres iniciar el juego?</h2><p>Primero elegirás tu EPP. Después comenzará el recorrido por el almacén.</p><button class="primary" id="start-game">Sí, elegir mi EPP →</button>';
@@ -79,18 +85,18 @@
   }
   function showEquipment(){
     state='equipment';$('#pause').disabled=true;$('#overlay').classList.remove('ready');$('#overlay').classList.remove('hidden');document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});
-    $('#modal').innerHTML='<p class="eyebrow">ANTES DE ENTRAR / 01</p><h2>La seguridad empieza contigo.</h2><p>Elige cómo entrar al almacén. <b>Jugarás con lo que selecciones</b>, aunque sea incorrecto. Las decisiones inseguras activan incidentes, restan una vida y explican qué debes corregir.</p><div class="equipment"></div><p class="feedback" role="status"></p><button class="primary" id="enter">Comenzar recorrido con mi elección →</button><p class="tiny">Usa las flechas y espacio. Camina por la ruta peatonal. Puedes saltar en los espacios libres, pero no sobre las tarimas.</p>';
+    $('#modal').innerHTML='<p class="eyebrow">ANTES DE ENTRAR / 01</p><h2>La seguridad empieza contigo.</h2><p>Elige cómo entrar al almacén. <b>Jugarás con lo que selecciones</b>, aunque sea incorrecto. Las decisiones inseguras activan incidentes, restan una vida y explican qué debes corregir.</p><div class="equipment"></div><p class="feedback" role="status"></p><button class="primary" id="enter">Comenzar recorrido con mi elección →</button><p class="tiny">El personaje avanza solo. Frena con ← para observar y detenerte en los cruces; acelera con →. Salta con espacio e inspecciona con E.</p>';
     const selected=new Set();equipment.forEach(([id,icon,name])=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed','false');b.innerHTML='<span>'+icon+'</span>'+name;b.dataset.equipment=id;b.onclick=()=>{if(selected.has(id))selected.delete(id);else{const opposite={helmet:'cap',cap:'helmet',boots:'sandals',sandals:'boots'}[id];if(opposite)selected.delete(opposite);selected.add(id);}document.querySelectorAll('[data-equipment]').forEach(button=>button.setAttribute('aria-pressed',String(selected.has(button.dataset.equipment))));};$('.equipment').append(b);});
-    $('#enter').onclick=()=>{worn=new Set(selected);state='playing';clearKeys();$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};
+    $('#enter').onclick=()=>{worn=new Set(selected);autoRun=true;state='playing';clearKeys();$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};
   }
   function missObservation(item){
-    item.missed=true;lives--;state='lesson';clearKeys();$('#pause').disabled=true;hud();$('#overlay').classList.remove('hidden');
+    item.missed=true;lives--;streak=0;state='lesson';clearKeys();$('#pause').disabled=true;hud();$('#overlay').classList.remove('hidden');
     const kind=item.type==='act'?'acto inseguro':'condición insegura';
     $('#modal').innerHTML='<p class="eyebrow">PASASTE SIN REPORTAR · −1 VIDA</p><h2>Se te pasó un '+kind+'.</h2><p><b>'+item.title+'</b></p><p>'+item.explanation+'</p><p class="tiny">Perdiste una vida porque avanzaste sin identificar y reportar esta situación. Observa cada zona antes de seguir; puedes regresar a reportarla si conservas vidas.</p><button class="primary" id="continue-miss">'+(lives?'Continuar y observar →':'Ver resultado del turno →')+'</button>';
     $('#continue-miss').onclick=()=>{if(!lives){finish();return;}state='playing';$('#overlay').classList.add('hidden');$('#pause').disabled=false;};
   }
   function needsIncident(s){return s.id==='head'?!worn.has('helmet'):s.id==='audio'?worn.has('headphones'):s.id==='feet'?!worn.has('boots'):!worn.has('vest');}
-  function startIncident(s){incident=s;triggered.add(s.id);lives--;state='incident';deathTime=1.1;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;clearKeys();$('#pause').disabled=true;hud();toast('Incidente por tu elección de equipo · −1 vida',2);}
+  function startIncident(s){incident=s;triggered.add(s.id);lives--;streak=0;state='incident';deathTime=1.1;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;clearKeys();$('#pause').disabled=true;hud();toast('Incidente por tu elección de equipo · −1 vida',2);}
   function showLesson(){
     state='lesson';$('#overlay').classList.remove('hidden');
     const title=incident.missingTitle&&!worn.has(incident.remove)?incident.missingTitle:incident.title;
@@ -101,27 +107,27 @@
     const isAct=h.type==='act';
     state='inspection';clearKeys();$('#pause').disabled=true;$('#overlay').classList.remove('hidden');
     $('#modal').innerHTML='<p class="eyebrow">OBSERVA · IDENTIFICA · REPORTA</p><h2>¿Qué '+(isAct?'acto':'condición')+' encontraste?</h2><p>Identifica lo que viste cerca de ti. Reporta desde una distancia segura.</p><div class="hazard-options"></div><p class="feedback" role="status"></p><button class="secondary" id="back">Volver a observar</button>';
-    h.choices.forEach((choice,i)=>{const b=document.createElement('button');b.textContent=choice;b.onclick=()=>{if(i!==h.answer){$('.feedback').textContent='Esa opción no corresponde a lo que estás observando. Revisa la escena y la acción de las personas.';return;}if(h.reported)return;h.reported=true;if(isAct)totalActs++;else totalReports++;hud();$('#modal').innerHTML='<p class="eyebrow">✓ '+(isAct?'ACTO REPORTADO':'CONDICIÓN REPORTADA')+'</p><h2>'+h.title+'</h2><p>'+h.explanation+'</p><p class="tiny">'+(isAct?'El reporte registra la conducta observada; no significa que ya se haya corregido.':'Reportar no elimina el peligro. Conserva distancia; su corrección corresponde al personal autorizado.')+'</p><button class="primary" id="continue">Continuar recorrido →</button>';$('#continue').onclick=closeInspection;};$('.hazard-options').append(b);});
+    h.choices.forEach((choice,i)=>{const b=document.createElement('button');b.textContent=choice;b.onclick=()=>{if(i!==h.answer){$('.feedback').textContent='Esa opción no corresponde a lo que estás observando. Revisa la escena y la acción de las personas.';return;}if(h.reported)return;h.reported=true;if(isAct)totalActs++;else totalReports++;streak++;hud();$('#modal').innerHTML='<p class="eyebrow">✓ '+(isAct?'ACTO REPORTADO':'CONDICIÓN REPORTADA')+'</p><h2>'+h.title+'</h2><p>'+h.explanation+'</p><p class="tiny">'+(isAct?'El reporte registra la conducta observada; no significa que ya se haya corregido.':'Reportar no elimina el peligro. Conserva distancia; su corrección corresponde al personal autorizado.')+'</p><button class="primary" id="continue">Continuar recorrido →</button>';$('#continue').onclick=closeInspection;};$('.hazard-options').append(b);});
     $('#back').onclick=closeInspection;
   }
   function closeInspection(){state='playing';clearKeys();$('#overlay').classList.add('hidden');$('#pause').disabled=false;}
 
   function pause(){if(state==='playing'){state='paused';clearKeys();$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">TOMA UN RESPIRO</p><h2>Turno en pausa.</h2><p>Sector '+sector+' · Recorrido continuo. La partida se conserva mientras está en pausa.</p><button class="primary" id="resume">Continuar misión →</button>';$('#resume').onclick=pause;}else if(state==='paused'){state='playing';$('#overlay').classList.add('hidden');}}
-  function finish(){state='lost';clearKeys();$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p>Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p><div class="result"><span>Sector: '+sector+'</span><span>Stella: '+totalPallets+'</span><span>Reportes: '+totalReports+'</span><span>Actos: '+totalActs+'</span><span>Escaleras: '+completedStairs+'</span></div><button class="primary" id="again">Volver a jugar ↻</button>';$('#again').onclick=reset;}
-  function interact(){if(state!=='playing')return;const h=[...hazards,...workers].filter(h=>!h.reported&&Math.abs(player.x+16-h.x)<90&&player.ground&&Math.abs(player.y+player.h-(h.feet??FLOOR))<85).sort((a,b)=>Math.abs(player.x+16-a.x)-Math.abs(player.x+16-b.x))[0];if(h){inspectHazard(h);return;}const p=pallets.find(p=>Math.abs(player.x+16-(p.x+53))<115&&player.ground&&player.y>300);if(p){if(p.brand==='STELLA'){if(found){toast('Tarima ya registrada.');return;}found=true;p.registered=true;totalPallets++;hud();toast('¡Tarima de Stella registrada!',5);}else toast('Esta tarima es de '+p.brand+'.');}else toast('No se registró ninguna interacción.');}
+  function finish(){state='lost';clearKeys();$('#pause').disabled=true;$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p>Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p><div class="result"><span>Sector: '+sector+'</span><span>Stella: '+totalPallets+'</span><span>Reportes: '+totalReports+'</span><span>Actos: '+totalActs+'</span><span>Escaleras: '+completedStairs+'</span></div><button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button>';$('#again').onclick=()=>{const gear=new Set(worn);reset();worn=gear;autoRun=true;state='playing';$('#overlay').classList.remove('ready');$('#overlay').classList.add('hidden');$('#pause').disabled=false;hud();document.querySelector('.game-shell').scrollIntoView({block:'start',behavior:'instant'});};$('#change-epp').onclick=()=>{reset();showEquipment();};}
+  function interact(){if(state!=='playing')return;const h=[...hazards,...workers].filter(h=>!h.reported&&Math.abs(player.x+16-h.x)<90&&player.ground&&Math.abs(player.y+player.h-(h.feet??FLOOR))<85).sort((a,b)=>Math.abs(player.x+16-a.x)-Math.abs(player.x+16-b.x))[0];if(h){inspectHazard(h);return;}const p=pallets.find(p=>Math.abs(player.x+16-(p.x+53))<115&&player.ground&&player.y>300);if(p){if(p.brand==='STELLA'){if(found){toast('Tarima ya registrada.');return;}found=true;p.registered=true;totalPallets++;streak++;hud();toast('¡Stella registrada! Racha '+streak,3);}else toast('Esta tarima es de '+p.brand+'.');}else toast('No se registró ninguna interacción.');}
   $('#pause').onclick=pause;$('#restart').onclick=()=>{reset();document.querySelector('.setup').scrollIntoView({block:'start',behavior:'instant'});};
   window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','Space'].includes(e.code)&&!['BUTTON','INPUT'].includes(e.target.tagName))e.preventDefault();if(e.repeat&&['KeyE','KeyP','Escape','Space','ArrowUp','KeyW'].includes(e.code))return;if(['KeyP','Escape'].includes(e.code)){pause();return;}if(state!=='playing')return;if(['ArrowLeft','KeyA'].includes(e.code))keys.left=true;if(['ArrowRight','KeyD'].includes(e.code))keys.right=true;if(['Space','ArrowUp','KeyW'].includes(e.code))keys.jump=true;if(e.code==='KeyE')interact();});
   window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA'].includes(e.code))keys.left=false;if(['ArrowRight','KeyD'].includes(e.code))keys.right=false;if(['Space','ArrowUp','KeyW'].includes(e.code))keys.jump=false;});
   window.addEventListener('blur',()=>{clearKeys();if(state==='playing')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')pause();});
   document.querySelectorAll('[data-key]').forEach(b=>{const key=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);if(state!=='playing')return;if(key==='interact')interact();else keys[key]=true;});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>{if(key!=='interact')keys[key]=false;}));});
-  function hit(c){lives--;state='dying';deathTime=.9;crash=c;clearKeys();hud();toast('¡Alto! Cruzaste sin detenerte. −1 vida. Espera el verde antes de pasar.',5);}
+  function hit(c){lives--;streak=0;state='dying';deathTime=.9;crash=c;clearKeys();hud();toast('¡Alto! Cruzaste sin detenerte. −1 vida. Espera el verde antes de pasar.',5);}
   function update(dt){
     if(['paused','lesson','inspection'].includes(state)||document.hidden)return;time+=dt;if(toastTime>0){toastTime-=dt;if(toastTime<=0)$('#toast').classList.remove('visible');}
     if(state==='incident'){deathTime-=dt;if(deathTime<=0)showLesson();return;}
     if(state==='dying'){deathTime-=dt;if(deathTime<=0){if(lives===0){finish(false);return;}player.x=crash.x-140;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;crash.hold=0;crash=null;state='playing';}return;}
     if(state!=='playing')return;
     updateWorkers(dt);
-    player.vx=(Number(keys.right)-Number(keys.left))*300;if(player.vx)player.face=Math.sign(player.vx);
+    player.vx=autoRun?(keys.left?0:245+Math.min(90,(sector-1)*12)+(keys.right?75:0)):(Number(keys.right)-Number(keys.left))*300;if(player.vx)player.face=Math.sign(player.vx);
     const onStairs=stairAt(player.x+player.w/2);
     const besideStorage=!!onStairs||noJumpZones.some(p=>player.x+player.w>p.x&&player.x<p.x+p.w);
     if(keys.jump&&player.ground){
@@ -148,14 +154,15 @@
       const active=onStairs||nextStair;
       if(surface===FLOOR-active.steps*active.rise)active.visitedTop=true;
       if(active.visitedTop&&!active.completed&&player.x+player.w/2>=active.x+stairWidth(active)){
-        active.completed=true;completedStairs++;hud();
+        active.completed=true;completedStairs++;streak++;hud();
       }
     }else{
       player.vy+=1450*dt;player.y+=player.vy*dt;player.ground=false;
       if(player.y+player.h>=surface){player.y=surface-player.h;player.vy=0;player.ground=true;}
     }
+    for(const token of focusTokens){if(!token.collected&&Math.abs(player.x+player.w/2-token.x)<24&&player.y<token.y+12&&player.y+player.h>token.y-12){token.collected=true;streak++;hud();toast('Punto de atención · racha '+streak,2);}}
     for(const c of crossings){if(c.cleared)continue;const inStop=player.x+player.w>c.x-stopWidth()&&player.x+player.w<=c.x&&player.ground&&player.y+player.h>=FLOOR-1;
-      if(inStop&&player.vx===0){c.hold+=dt;if(c.hold>=stopTime()){c.cleared=true;hud();}}else c.hold=0;
+      if(inStop&&player.vx===0){c.hold+=dt;if(c.hold>=stopTime()){c.cleared=true;streak++;hud();}}else c.hold=0;
       if(!c.cleared&&player.x+player.w>c.x&&player.x<c.x+c.w){hit(c);break;}
     }
     if(state==='playing'&&sector===1){const next=incidentScenarios.find(s=>!triggered.has(s.id)&&player.x>=s.x&&needsIncident(s));if(next)startIncident(next);}
@@ -278,6 +285,7 @@
       if(c.hold>0&&!c.cleared){rect(c.x-113,426,103,7,'#292929');rect(c.x-113,426,103*Math.min(1,c.hold/stopTime()),7,'#ffc600');}
       if(c.cleared){forklift(c.x+c.w-5,349,-1);text('DETENIDO',c.x+c.w-5,237,9,'#b7ea91','center');}else if(crash!==c)forklift(c.x+c.w/2+Math.sin(time*(1.5+Math.min(sector-1,10)*.3))*35,352,1);
     }
+    for(const token of focusTokens){if(token.collected)continue;ctx.save();ctx.translate(token.x,token.y);ctx.rotate(time*2);rect(-9,-9,18,18,'#ffc600');rect(-5,-5,10,10,'#fff0a0');ctx.restore();}
     pallets.forEach(pallet);hazards.forEach(drawHazard);stairs.forEach(drawStairs);workers.forEach(drawWorker);character();drawIncident();if(state==='dying'&&crash)forklift(player.x-100+(.9-deathTime)*290,FLOOR,1);
     ctx.restore();
     ctx.restore();

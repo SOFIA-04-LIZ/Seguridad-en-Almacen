@@ -18,7 +18,7 @@ Se verificaron en Chrome nueve tamaños: 320×568, 360×640, 390×844, 430×932,
 
 ## Controles
 
-- Flechas izquierda/derecha o A/D: caminar y recorrer los peldaños de las escaleras, tanto de subida como de bajada.
+- El personaje avanza automáticamente. Flecha izquierda o A: frenar para observar y detenerse en cruces. Flecha derecha o D: acelerar. Recorre los peldaños de las escaleras al avanzar.
 - Espacio, flecha arriba o W: saltar en los espacios libres. No se permite saltar sobre tarimas ni saltarse las escaleras.
 - E: interactuar.
 - P o Escape: pausar.
@@ -30,7 +30,7 @@ En dispositivos táctiles aparecen botones. Cambiar de ventana pausa la partida.
 
 Al llegar al extremo del sector se genera el siguiente y el personaje continúa con su EPP y sus vidas. No hay puerta final ni pantalla de victoria. La partida termina cuando se agotan las tres vidas.
 
-El personaje avanza a 300 unidades por segundo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
+El personaje avanza automáticamente y acelera en sectores posteriores; una racha aumenta al cruzar con seguridad, registrar Stella, reportar observaciones y completar escaleras. También hay puntos de atención opcionales para recoger saltando en espacios libres. Al terminar, se puede reintentar de inmediato con el mismo EPP o cambiarlo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
 
 Los contadores acumulan tarimas de Stella, condiciones reportadas, actos inseguros reportados y escaleras recorridas. Cada sector renueva sus objetos y reportes; las condiciones que se dejaron atrás sin reportar no suman puntos. Los cinco objetivos del panel corresponden al sector actual.
 

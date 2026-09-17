@@ -19,15 +19,18 @@ document.querySelector('#game').getBoundingClientRect=()=>({width:1200,height:54
 const sandbox = {document,window:{addEventListener(){}},requestAnimationFrame(){},console};
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../scenarios.js'),'utf8'),sandbox);
-const code = fs.readFileSync(path.join(__dirname,'../game.js'),'utf8').replace('reset();requestAnimationFrame(frame);',`reset();globalThis.test={update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,stopTime,stopWidth,buildSector,advanceSector,
- get sector(){return sector},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
+const code = fs.readFileSync(path.join(__dirname,'../game.js'),'utf8').replace('reset();requestAnimationFrame(frame);',`reset();globalThis.test={update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,stopTime,stopWidth,buildSector,advanceSector,focusTokens,
+ get sector(){return sector},get streak(){return streak},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
  get player(){return player},get state(){return state},get lives(){return lives},get worn(){return worn},get epp(){return epp},get incident(){return incident},get triggered(){return triggered},get found(){return found},
  start(ids=['helmet','vest','boots']){worn=new Set(ids);state='playing';hud()},
  place(x,y=380){player.x=x;player.y=y;player.vx=player.vy=0;player.ground=true;clearKeys()}};`);
 vm.runInContext(code,sandbox);
 const t=sandbox.test, $=s=>document.querySelector(s), step=(n=1)=>{for(let i=0;i<n;i++)t.update(1/60)};
 // The actual entry button accepts wrong and empty choices, and exclusive slots stay exclusive.
-assert.equal(t.state,'ready');$('#start-game').onclick();assert.equal(t.state,'equipment');$('#enter').onclick();assert.equal(t.state,'playing');assert.equal(t.epp,false);
+assert.equal(t.state,'ready');$('#start-game').onclick();assert.equal(t.state,'equipment');$('#enter').onclick();assert.equal(t.state,'playing');
+const runnerStart=t.player.x;step(20);assert(t.player.x>runnerStart,'runner should advance automatically');
+t.keys.left=true;const brakePoint=t.player.x;step(10);assert.equal(t.player.x,brakePoint,'brake should stop the runner');
+t.keys.left=false;t.keys.right=true;step(5);assert(t.player.x>brakePoint+20,'accelerate should increase speed');assert.equal(t.epp,false);
 t.reset();$('#start-game').onclick();const buttons=$('.equipment').children;
 buttons.find(b=>b.dataset.equipment==='helmet').onclick();buttons.find(b=>b.dataset.equipment==='cap').onclick();
 buttons.find(b=>b.dataset.equipment==='headphones').onclick();$('#enter').onclick();
@@ -54,10 +57,16 @@ t.crossings.forEach(c=>c.cleared=true);t.place(missedAct.max+110);t.keys.right=t
 assert.equal(t.state,'lesson');assert.equal(t.lives,2);assert(missedAct.missed);assert($('#modal').innerHTML.includes(missedAct.title));
 $('#continue-miss').onclick();t.place(missedAct.x-16);t.interact();assert.equal(t.state,'inspection');
 $('.hazard-options').children[missedAct.answer].onclick();$('#continue').onclick();assert(missedAct.reported);
+// Optional airborne attention points reward timing without replacing safety objectives.
+t.reset();t.start();assert(t.focusTokens.length>0);const token=t.focusTokens[0];
+t.place(token.x-16,320);t.player.ground=false;step();
+assert(token.collected);assert.equal(t.streak,1);
 // Three bad choices show the third explanation before the loss screen.
 t.reset();t.start(['cap','sandals','headphones']);
 for(const x of [301,651,1121]){t.place(x);step();step(120);assert.equal(t.state,'lesson');$('#correct').onclick();}
 assert.equal(t.state,'lost');assert.equal(t.lives,0);
+const replayGear=[...t.worn].sort();$('#again').onclick();assert.equal(t.state,'playing');assert.equal(t.lives,3);assert.deepEqual([...t.worn].sort(),replayGear);
+const replayX=t.player.x;step(5);assert(t.player.x>replayX,'one-tap replay should resume automatic movement');
 // Wrong answers do not report; a correct answer registers once and preserves lives.
 t.reset();t.start();t.place(t.hazards[0].x);t.interact();assert.equal(t.state,'inspection');
 $('.hazard-options').children[1].onclick();assert.equal(t.hazards[0].reported,false);assert.equal(t.lives,3);

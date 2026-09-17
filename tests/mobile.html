@@ -14,7 +14,7 @@ frame.onload=async()=>{
   const title=box('.hero h1');
   check(title.left>=0&&title.right<=width,'heading clipped');
   check(!doc.querySelector('.hero aside'),'old mission panel remains');
-  check(doc.querySelector('.intro').textContent.includes('Stella. Un'),'intro sentences run together');
+  check(doc.querySelector('.intro').textContent.includes('Stella. Cada'),'intro sentences run together');
  }
  check(parseFloat(win.getComputedStyle(doc.querySelector('.setup p:not(.eyebrow)')).fontSize)>=(width<=700?14:16),'instructions too small');
  check(doc.querySelector('#overlay').classList.contains('ready'),'welcome must appear in game');
