@@ -17,7 +17,7 @@
   function randomLocations(){
     // Ground bays have space for an object or a short patrol, away from crossings and stairs.
     const bays=[460,1150,1500,2120,2700,2900,3100,4880];
-    const ids=[...window.WAREHOUSE_SCENARIOS.hazards.map(h=>h.id),...window.WAREHOUSE_SCENARIOS.acts.filter(a=>a.id!=='noHandrail').map(a=>a.id)];
+    const ids=[...window.WAREHOUSE_SCENARIOS.hazards.map(h=>h.id),...window.WAREHOUSE_SCENARIOS.acts.filter(a=>!['noHandrail','phoneWalking'].includes(a.id)).map(a=>a.id)];
     function assign(index,available,result){
       if(index===ids.length)return result;
       for(const bay of shuffle(available)){
@@ -49,11 +49,12 @@
     const route=shuffle(routes.filter(r=>r.key!==previousStairRoute))[0];previousStairRoute=route.key;
     const run=route.s.steps*route.s.tread;
     workers.splice(0,workers.length,...window.WAREHOUSE_SCENARIOS.acts.map(a=>{
-      const ground=a.id!=='noHandrail';
-      const min=ground?locations.get(a.id)-25:route.side==='up'?route.s.x+25:route.s.x+run+route.s.deck+15;
-      const max=ground?locations.get(a.id)+25:route.side==='up'?route.s.x+run-15:route.s.x+stairWidth(route.s)-25;
+      const ground=!['noHandrail','phoneWalking'].includes(a.id);
+      const stairSide=a.id==='phoneWalking'?(route.side==='up'?'down':'up'):route.side;
+      const min=ground?locations.get(a.id)-25:stairSide==='up'?route.s.x+25:route.s.x+run+route.s.deck+15;
+      const max=ground?locations.get(a.id)+25:stairSide==='up'?route.s.x+run-15:route.s.x+stairWidth(route.s)-25;
       const x=min+Math.random()*(max-min);
-      return {...a,type:'act',reported:false,missed:false,min,max,x,feet:ground?FLOOR:floorAt(x),direction:Math.random()<.5?-1:1,phase:Math.random()*Math.PI*2};
+      return {...a,type:'act',onStairs:!ground,reported:false,missed:false,min,max,x,feet:ground?FLOOR:floorAt(x),direction:Math.random()<.5?-1:1,phase:Math.random()*Math.PI*2};
     }));
     noJumpZones.splice(0,noJumpZones.length,...storage.map(p=>({x:p.x-8,w:p.w+16})),...pallets.map(p=>({x:p.x-10,w:124})),...hazards.map(h=>({x:h.x-48,w:96})));
     const tokenSpots=[560,780,1180,1750,2260,2680,3130,4180,4590].filter(x=>
@@ -61,7 +62,7 @@
       crossings.every(c=>x<c.x-stopWidth()-70||x>c.x+c.w+70)&&
       stairs.every(st=>x<st.x-70||x>st.x+stairWidth(st)+70));
     focusTokens.splice(0,focusTokens.length,...shuffle(tokenSpots).slice(0,Math.min(3,tokenSpots.length)).map(x=>({x,y:350,collected:false})));
-    const safeSpots=[];for(let x=190;x<WORLD-90;x+=165){if(noJumpZones.some(z=>x>z.x-55&&x<z.x+z.w+55)||crossings.some(c=>x>c.x-stopWidth()-45&&x<c.x+c.w+45)||stairs.some(st=>x>st.x-50&&x<st.x+stairWidth(st)+50)||workers.some(w=>w.id!=='noHandrail'&&x>w.min-65&&x<w.max+65))continue;safeSpots.push(x);}
+    const safeSpots=[];for(let x=190;x<WORLD-90;x+=165){if(noJumpZones.some(z=>x>z.x-55&&x<z.x+z.w+55)||crossings.some(c=>x>c.x-stopWidth()-45&&x<c.x+c.w+45)||stairs.some(st=>x>st.x-50&&x<st.x+stairWidth(st)+50)||workers.some(w=>!w.onStairs&&x>w.min-65&&x<w.max+65))continue;safeSpots.push(x);}
     coins.splice(0,coins.length,...safeSpots.map(x=>({x,y:400,collected:false,risky:false})),...trapCrossings.map(c=>({x:c.x+c.w/2,y:400,collected:false,risky:true,crossing:c,active:false,expired:false,timeLeft:1})));
   }
   function stairWidth(s){return s.steps*s.tread*2+s.deck;}
@@ -73,7 +74,20 @@
 
   let autoRun=false,streak=0,startDelay=0;
   let state='ready',player,lives=3,found=false,fishFound=false,epp=false,camera=0,time=0,last=0,toastTime=0,deathTime=0,crash=null;
-  function clearKeys(){keys.left=keys.right=keys.jump=false;}
+  const speedLever=$('#speed-lever');
+  let leverPointer=null;
+  function setLever(value){
+    const width=speedLever.getBoundingClientRect().width;
+    const travel=Math.max(0,width/2-22);
+    speedLever.style.setProperty('--lever-offset',`${value*travel}px`);
+    const direction=value<-.25?-1:value>.25?1:0;
+    speedLever.setAttribute('aria-valuenow',String(direction));
+    speedLever.setAttribute('aria-valuetext',direction<0?'Frenar':direction>0?'Acelerar':'Avance normal');
+    keys.left=state==='playing'&&direction<0;
+    keys.right=state==='playing'&&direction>0;
+  }
+  function resetLever(){leverPointer=null;setLever(0);}
+  function clearKeys(){resetLever();keys.jump=false;}
   function toast(message,seconds=4){$('#toast').textContent=message;$('#toast').classList.add('visible');toastTime=seconds;}
   function hud(){
     $('#lives').textContent='♥ '.repeat(lives)+'♡ '.repeat(MAX_LIVES-lives);$('#lives').setAttribute('aria-label',lives+' vidas');$('#life-number').textContent=lives+'/'+MAX_LIVES;$('#count').textContent=totalPallets;$('#fish-count').textContent=totalFish;$('#coin-count').textContent=totalCoins;$('#sector').textContent=sector;
@@ -135,6 +149,16 @@
   window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA'].includes(e.code))keys.left=false;if(['ArrowRight','KeyD'].includes(e.code))keys.right=false;if(['Space','ArrowUp','KeyW'].includes(e.code))keys.jump=false;});
   window.addEventListener('blur',()=>{clearKeys();if(state==='playing')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')pause();});
   document.querySelectorAll('[data-key]').forEach(b=>{const key=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);if(state!=='playing')return;if(key==='interact')interact();else keys[key]=true;});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>{if(key!=='interact')keys[key]=false;}));});
+  function dragLever(e){
+    const rect=speedLever.getBoundingClientRect(),travel=Math.max(1,rect.width/2-22);
+    setLever(Math.max(-1,Math.min(1,(e.clientX-rect.left-rect.width/2)/travel)));
+  }
+  speedLever.addEventListener('pointerdown',e=>{if(state!=='playing'||leverPointer!==null)return;e.preventDefault();leverPointer=e.pointerId;speedLever.setPointerCapture(e.pointerId);dragLever(e);});
+  speedLever.addEventListener('pointermove',e=>{if(e.pointerId===leverPointer)dragLever(e);});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])speedLever.addEventListener(event,e=>{if(e.pointerId===leverPointer)resetLever();});
+  speedLever.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.code))return;e.preventDefault();if(state==='playing')setLever(e.code==='ArrowLeft'?-1:1);});
+  speedLever.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight'].includes(e.code))resetLever();});
+  speedLever.addEventListener('blur',resetLever);
   function collectCoin(coin){coin.collected=true;if(coin.risky)coin.crossing.coinTrap=false;totalCoins++;coinsTowardLife++;streak++;if(coinsTowardLife>=5){coinsTowardLife=0;if(lives<MAX_LIVES){lives++;toast('¡Cinco monedas seguras! +1 vida',3);}else toast('¡Cinco monedas seguras! Vida al máximo',3);}hud();}
   function hit(c){lives--;streak=0;state='dying';deathTime=.9;crash=c;clearKeys();hud();toast(c.coinTrap?'¡Alto! Una moneda no vale tu vida. −1 vida.':'¡Alto! Cruzaste sin detenerte. −1 vida.',3);}
   function showCoinLesson(){state='lesson';player.x=crash.x-140;player.y=FLOOR-player.h;player.vx=player.vy=0;player.ground=true;crash.hold=0;crash=null;$('#overlay').classList.remove('hidden');$('#modal').innerHTML='<p class="eyebrow">DECISIÓN INSEGURA · −1 VIDA</p><h2>Una moneda no vale tu vida.</h2><p>Entraste al cruce por una moneda sin esperar la señal. Un montacargas puede aparecer: por una moneda tu vida puede acabar. Cuídate. Detente, observa y cruza solo cuando sea seguro.</p><button class="primary" id="after-coin">'+(lives?'Entendido, continuar →':'Ver resultado →')+'</button>';$('#after-coin').onclick=()=>{if(!lives){finish();return;}state='playing';$('#overlay').classList.add('hidden');};}
@@ -189,7 +213,7 @@
     if(state==='playing'&&player.x>=WORLD-player.w-22)advanceSector();
     camera=Math.max(0,Math.min(WORLD-W,player.x-W*.3));$('#zone').textContent='● SECTOR '+String(sector).padStart(2,'0')+' · NIVEL '+sector;
   }
-  function runSpeed(){return 275+Math.min(220,(sector-1)*22);}
+  function runSpeed(){return 275+Math.min(250,(sector-1)*50);}
   function stopTime(){return Math.min(1.6,.8+(sector-1)*.15);}
   function stopWidth(){return Math.max(65,115-(sector-1)*8);}
   function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
@@ -263,7 +287,7 @@
       const {min,max}=worker;
       worker.x+=worker.direction*48*dt;
       if(worker.x>=max){worker.x=max;worker.direction=-1;}else if(worker.x<=min){worker.x=min;worker.direction=1;}
-      worker.feet=worker.id==='noHandrail'?floorAt(worker.x):FLOOR;
+      worker.feet=worker.onStairs?floorAt(worker.x):FLOOR;
       worker.phase+=dt*8;
     }
   }
@@ -277,6 +301,7 @@
     rect(-22,-45,7,20,'#495361');rect(15,-45,7,20,'#495361');rect(-22,-25,7,6,'#d6a074');rect(15,-25,7,6,'#d6a074');
     rect(-9,-64,21,17,'#d6a074');rect(-11,-67,23,7,'#38281e');rect(-11,-63,5,10,'#38281e');
     if(worker.id!=='noHelmet'){rect(-12,-68,27,9,'#ebebe6');rect(-7,-74,17,9,'#ebebe6');rect(-15,-60,33,4,'#fffdf4');}
+    if(worker.id==='phoneWalking'){line(18,-42,15,-59,'#495361',7);rect(11,-65,7,15,'#101820');rect(13,-63,3,9,'#83c4d8');}
     rect(7,-56,3,3,'#222');ctx.restore();
     if(worker.reported){rect(worker.x-54,worker.feet-106,108,20,'#1c2920');text('✓ REPORTADO',worker.x,worker.feet-92,10,'#b7ea91','center');}
   }

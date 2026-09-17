@@ -20,6 +20,8 @@ frame.onload=async()=>{
  check(doc.querySelector('#overlay').classList.contains('ready'),'welcome must appear in game');
  check(win.getComputedStyle(doc.querySelector('#overlay')).position==='absolute','welcome must stay in scenario');
  check(box('.setup').bottom<=box('.game-shell').top+1,'instructions must precede the game');
+ check(doc.querySelector('.setup .how-to-play')&&box('.how-to-play').bottom<=box('.setup').bottom+1,'control guide must be inside the instructions');
+ check(!doc.querySelector('.game-shell .controls'),'control strip remains under the game');
  check(!doc.querySelector('.objectives'),'old objective cards remain');
  check(box('.header-note').right<=width+1,'header note clipped');
  check(!doc.querySelector('#act-list')&&!doc.querySelector('#hazard-list'),'extra status chips visible');
@@ -32,6 +34,7 @@ frame.onload=async()=>{
  const stage=box('.stage'),touch=box('.touch');check(stage.width>0&&stage.height>0,'empty stage');
  if(width<=800||height<=550)check(win.getComputedStyle(doc.querySelector('.touch')).display!=='none','touch controls hidden');
  for(const button of win.getComputedStyle(doc.querySelector('.touch')).display==='none'?[]:doc.querySelectorAll('.touch button')){const r=button.getBoundingClientRect();check(r.width>=44&&r.height>=44,'touch target too small');}
+ if(touch.height){const lever=box('#speed-lever');check(lever.width>=112&&lever.height>=44,'speed lever too small');check(lever.right<=width+1,'speed lever clipped');}
  check(box('.game-shell').height<=height+1,'game plus controls taller than screen: '+box('.game-shell').height);
  if(touch.height)check(touch.top>=stage.bottom-1,'controls overlap scene');
  results.push(width+'x'+height+' PASS');doc.querySelector('#overlay').classList.remove('hidden');

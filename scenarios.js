@@ -22,6 +22,8 @@ window.WAREHOUSE_SCENARIOS = {
       explanation:'La persona trabaja sin chaleco en una zona donde circulan equipos móviles. Es una conducta insegura: reporta y solicita que use el EPP requerido antes de continuar.'},
     {id:'nearForklift',title:'Persona demasiado cerca del montacargas',choices:['Mantener distancia del montacargas','Trabajar junto al montacargas en movimiento','Usar el paso peatonal'],answer:1,
       explanation:'La persona se acercó a la zona de maniobra del montacargas. Debe detenerse, mantener distancia y confirmar que el equipo se detuvo antes de avanzar.'},
+    {id:'phoneWalking',title:'Persona caminando mientras habla por teléfono',choices:['Caminar atento a la ruta y detenerse para usar el teléfono','Caminar por el almacén hablando por teléfono','Mantener distancia de los vehículos'],answer:1,
+      explanation:'Hablar por teléfono mientras se camina distrae la atención del paso, los escalones y los vehículos. La persona debe detenerse en un lugar seguro para usarlo y observar la ruta antes de continuar.'},
     {id:'noHandrail',title:'Subir o bajar sin sujetarse del pasamanos',choices:['Usar el pasamanos al subir','Subir y bajar sin sujetarse del pasamanos','Transitar por una escalera dañada'],answer:1,
       explanation:'La escalera tiene pasamanos, pero la persona mantiene las manos junto al cuerpo y no se sujeta al subir o bajar. El acto inseguro es cómo usa la escalera. Reporta la conducta; sujetarse del pasamanos ayuda a mantener el equilibrio.'}
   ],

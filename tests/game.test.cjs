@@ -6,7 +6,9 @@ const path = require('node:path');
 const nodes = new Map();
 function node() {
   return {children:[],dataset:{},textContent:'',disabled:false,
-    classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},scrollIntoView(){},
+    classList:{add(){},remove(){},toggle(){}},style:{setProperty(){}},setAttribute(){},
+    addEventListener(type,handler){(this.listeners??={})[type]=handler},setPointerCapture(){},
+    getBoundingClientRect(){return {left:0,width:200,height:44}},scrollIntoView(){},
     append(child){this.children.push(child)},querySelector(){return node()},
     set innerHTML(value){this.html=value;this.children=[];if(this===nodes.get('#modal'))for(const key of ['.equipment','.hazard-options','.feedback'])nodes.delete(key)},
     get innerHTML(){return this.html || ''}};
@@ -28,9 +30,14 @@ vm.runInContext(code,sandbox);
 const t=sandbox.test, $=s=>document.querySelector(s), step=(n=1)=>{for(let i=0;i<n;i++)t.update(1/60)};
 // The actual entry button accepts wrong and empty choices, and exclusive slots stay exclusive.
 assert.equal(t.state,'ready');$('#start-game').onclick();assert.equal(t.state,'equipment');$('#enter').onclick();assert.equal(t.state,'playing');
+const lever=$('#speed-lever'),pointer={pointerId:1,preventDefault(){}};
+lever.listeners.pointerdown({...pointer,clientX:0});assert.equal(t.keys.left,true);assert.equal(t.keys.right,false);
+lever.listeners.pointermove({...pointer,clientX:200});assert.equal(t.keys.left,false);assert.equal(t.keys.right,true);
+lever.listeners.pointerup(pointer);assert.equal(t.keys.left,false);assert.equal(t.keys.right,false);
 assert.equal(t.runSpeed(),275);const runnerStart=t.player.x;step(120);assert.equal(t.player.x,runnerStart,'opening preview should allow observation');step(50);assert(t.player.x>runnerStart,'runner should advance after the preview');
 t.keys.left=true;const brakePoint=t.player.x;step(10);assert.equal(t.player.x,brakePoint,'brake should stop the runner');
 t.keys.left=false;t.keys.right=true;step(5);assert(t.player.x>brakePoint+20,'accelerate should increase speed');assert.equal(t.epp,false);
+const firstSectorSpeed=t.runSpeed();t.advanceSector();assert(t.runSpeed()>=firstSectorSpeed+45,'sector 2 must feel faster');
 t.reset();$('#start-game').onclick();const buttons=$('.equipment').children;
 buttons.find(b=>b.dataset.equipment==='helmet').onclick();buttons.find(b=>b.dataset.equipment==='cap').onclick();
 buttons.find(b=>b.dataset.equipment==='headphones').onclick();$('#enter').onclick();
@@ -119,13 +126,14 @@ while(t.sector<6&&limit++<15000){
  t.keys.right=!c;step();maxHeight=Math.max(maxHeight,380-p.y);
  assert.equal(t.state,'playing','Continuous safe route must remain traversable');
 }
-assert(limit<15000);assert.equal(t.sector,6);assert.equal(t.runSpeed(),385);assert(maxHeight>=135);assert.equal(t.completedStairs,9);assert(t.lives>=3&&t.lives<=5);assert.equal(t.crossings.length,4);assert(t.stopTime()>1.2);assert(t.stopWidth()<115);
+assert(limit<15000);assert.equal(t.sector,6);assert.equal(t.runSpeed(),525);assert(maxHeight>=135);assert.equal(t.completedStairs,9);assert(t.lives>=3&&t.lives<=5);assert.equal(t.crossings.length,4);assert(t.stopTime()>1.2);assert(t.stopWidth()<115);
 // Cannot jump over the staircase entrance or jump from its upper walkway.
 t.reset();t.start();const stair=t.stairs[0];t.place(stair.x-17,270);t.player.ground=false;t.keys.right=true;step();assert(t.player.x+16<stair.x);
 t.place(stair.x+stair.steps*stair.tread+30,t.floorAt(stair.x+stair.steps*stair.tread+46)-66);t.keys.jump=true;step();assert(t.player.ground);assert.equal(t.player.vy,0);
 console.log('PASS: five endless sectors, cumulative counters, increased crossings/waiting, narrower stop areas, mandatory stairs and no staircase jump bypass.');
 
 // Unsafe acts move, remain unmarked before reporting and are separate from conditions.
+t.reset();t.start();const phoneWorker=t.workers.find(w=>w.id==='phoneWalking');assert(phoneWorker&&phoneWorker.onStairs);t.place(phoneWorker.x-16,phoneWorker.feet-66);t.interact();assert.equal(t.state,'inspection');assert($('.hazard-options').children[phoneWorker.answer].textContent.includes('teléfono'));$('.hazard-options').children[phoneWorker.answer].onclick();assert(phoneWorker.reported);assert.equal(t.totalActs,1);
 t.reset();t.start();const worker=t.workers[0];const initialX=worker.x;step(30);assert.notEqual(worker.x,initialX);
 t.place(worker.x-16,worker.feet-66);t.interact();assert.equal(t.state,'inspection');
 $('.hazard-options').children[(worker.answer+1)%3].onclick();assert.equal(t.totalActs,0);assert(!worker.reported);
@@ -144,7 +152,7 @@ console.log('PASS: moving unsafe actors, wrong/correct answers, separate counts,
 let prior=new Map();
 for(let layout=0;layout<120;layout++){
  if(layout%8===0){t.reset();t.start();}else t.advanceSector();
- const positions=new Map(t.hazards.map(h=>[h.id,h.x]));for(const walker of t.workers.filter(w=>w.id!=='noHandrail'))positions.set(walker.id,(walker.min+walker.max)/2);
+ const positions=new Map(t.hazards.map(h=>[h.id,h.x]));for(const walker of t.workers.filter(w=>!w.onStairs))positions.set(walker.id,(walker.min+walker.max)/2);
  for(const [id,x] of positions){
   if(prior.has(id))assert(Math.abs(x-prior.get(id))>100,'Same scenario must change bays');
   assert(x>100&&x<4920);
