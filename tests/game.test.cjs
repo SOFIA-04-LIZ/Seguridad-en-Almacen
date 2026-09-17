@@ -80,7 +80,7 @@ $('.hazard-options').children[1].onclick();assert.equal(t.hazards[0].reported,fa
 $('.hazard-options').children[0].onclick();assert.equal(t.hazards[0].reported,true);assert.equal(t.state,'playing');
 t.interact();assert.equal(t.state,'playing');assert.equal(t.hazards.filter(h=>h.reported).length,1);
 // No exit at the former door location.
-t.place(2500);t.interact();assert(t.found);t.crossings.forEach(c=>c.cleared=true);t.hud();t.place(4000);t.interact();assert.equal(t.state,'playing');
+t.place(2500);t.interact();assert(t.found);t.crossings.forEach(c=>c.cleared=true);t.hud();t.place(100);t.interact();assert.equal(t.state,'playing');
 // Flying Fish is a separate pallet objective and the new observations are present.
 t.reset();t.start();assert(Math.min(...t.hazards.map(h=>h.x),...t.workers.filter(w=>w.id!=='noHandrail').map(w=>w.min))>=425,'opening route should be clear');assert(t.hazards.some(h=>h.id==='leak'));assert(!t.hazards.some(h=>h.id==='bench'));
 assert(t.workers.some(w=>w.id==='noVest'));assert(t.workers.some(w=>w.id==='nearForklift'));
@@ -110,7 +110,7 @@ while(t.sector===1&&frames++<5000){
 }
 assert(frames<5000);assert.equal(t.sector,2);assert.equal(t.totalReports,5);assert.equal(t.totalPallets,1);assert.equal(t.completedStairs,1);assert(t.lives>=3&&t.lives<=5);assert.equal(t.state,'playing');assert(t.hazards.every(h=>!h.reported));assert.equal(t.stairs.length,2);assert.equal(t.crossings.length,3);t.render();
 // Crossing penalties still work, even in the air.
-t.reset();t.start();t.place(849,270);t.player.ground=false;step();assert.equal(t.state,'dying');assert.equal(t.lives,2);step(100);assert.equal(t.state,'lesson');assert($('#modal').innerHTML.includes('Una moneda no vale tu vida'));$('#after-coin').onclick();assert.equal(t.state,'playing');
+t.reset();t.start();t.place(t.crossings[0].x-31,270);t.player.ground=false;t.keys.right=true;step();assert.equal(t.state,'dying');assert.equal(t.lives,2);step(100);assert.equal(t.state,'lesson');assert($('#modal').innerHTML.includes('Una moneda no vale tu vida'));$('#after-coin').onclick();assert.equal(t.state,'playing');
 // Every storage and hazard zone disallows takeoff and cannot be used as a platform.
 t.reset();t.start();for(const zone of t.noJumpZones){t.crossings.forEach(c=>c.cleared=true);t.place(zone.x+5);t.keys.jump=true;step();assert.equal(t.player.y,380);}
 t.reset();t.start();t.keys.jump=true;step();assert(t.player.y<380);step(60);assert.equal(t.player.y,380);
@@ -119,21 +119,21 @@ t.reset();assert(t.hazards.every(h=>!h.reported));assert.equal(t.triggered.size,
 console.log('PASS: entry choices, six equipment cases, explanations/corrections, game over, hazard quiz/reporting, continuous mission, no exit, crossing penalties, no climbing, pause and reset.');
 
 // Mandatory ascent and descent, plus difficulty growth across five consecutive sectors.
-t.reset();t.start();let maxHeight=0;let limit=0;
+t.reset();t.start();assert.equal(t.sector,1);assert.equal(t.stairs.length,1);let maxHeight=0;let limit=0;const stairCompletions=[];
 while(t.sector<6&&limit++<15000){
  t.hazards.forEach(h=>h.reported=true);t.workers.forEach(w=>w.reported=true);
  const p=t.player,c=t.crossings.find(c=>!c.cleared&&p.x+32>c.x-t.stopWidth()+15&&p.x+32<=c.x);
- t.keys.right=!c;step();maxHeight=Math.max(maxHeight,380-p.y);
+ t.keys.right=!c;const before=t.completedStairs,sectorBefore=t.sector;step();if(t.completedStairs!==before)stairCompletions.push(sectorBefore);maxHeight=Math.max(maxHeight,380-p.y);
  assert.equal(t.state,'playing','Continuous safe route must remain traversable');
 }
-assert(limit<15000);assert.equal(t.sector,6);assert.equal(t.runSpeed(),525);assert(maxHeight>=135);assert.equal(t.completedStairs,9);assert(t.lives>=3&&t.lives<=5);assert.equal(t.crossings.length,4);assert(t.stopTime()>1.2);assert(t.stopWidth()<115);
+assert(limit<15000);assert.equal(t.sector,6);assert.equal(t.runSpeed(),525);assert(maxHeight>=135);assert.equal(t.completedStairs,9,JSON.stringify(stairCompletions));assert(t.lives>=3&&t.lives<=5);assert.equal(t.crossings.length,4);assert(t.stopTime()>1.2);assert(t.stopWidth()<115);
 // Cannot jump over the staircase entrance or jump from its upper walkway.
 t.reset();t.start();const stair=t.stairs[0];t.place(stair.x-17,270);t.player.ground=false;t.keys.right=true;step();assert(t.player.x+16<stair.x);
 t.place(stair.x+stair.steps*stair.tread+30,t.floorAt(stair.x+stair.steps*stair.tread+46)-66);t.keys.jump=true;step();assert(t.player.ground);assert.equal(t.player.vy,0);
 console.log('PASS: five endless sectors, cumulative counters, increased crossings/waiting, narrower stop areas, mandatory stairs and no staircase jump bypass.');
 
 // Unsafe acts move, remain unmarked before reporting and are separate from conditions.
-t.reset();t.start();const phoneWorker=t.workers.find(w=>w.id==='phoneWalking');assert(phoneWorker&&phoneWorker.onStairs);t.place(phoneWorker.x-16,phoneWorker.feet-66);t.interact();assert.equal(t.state,'inspection');assert($('.hazard-options').children[phoneWorker.answer].textContent.includes('teléfono'));$('.hazard-options').children[phoneWorker.answer].onclick();assert(phoneWorker.reported);assert.equal(t.totalActs,1);
+t.reset();t.start();const phoneWorker=t.workers.find(w=>w.id==='phoneWalking');assert(phoneWorker&&!phoneWorker.onStairs);assert.equal(phoneWorker.feet,446);t.place(phoneWorker.x-16,phoneWorker.feet-66);t.interact();assert.equal(t.state,'inspection');assert($('.hazard-options').children[phoneWorker.answer].textContent.includes('teléfono'));$('.hazard-options').children[phoneWorker.answer].onclick();assert(phoneWorker.reported);assert.equal(t.totalActs,1);
 t.reset();t.start();const worker=t.workers[0];const initialX=worker.x;step(30);assert.notEqual(worker.x,initialX);
 t.place(worker.x-16,worker.feet-66);t.interact();assert.equal(t.state,'inspection');
 $('.hazard-options').children[(worker.answer+1)%3].onclick();assert.equal(t.totalActs,0);assert(!worker.reported);
@@ -143,24 +143,27 @@ const stairWorker=t.workers.find(w=>w.id==='noHandrail');t.place(stairWorker.x-1
 const frozenX=stairWorker.x;step(90);assert.equal(stairWorker.x,frozenX);
 $('.hazard-options').children[stairWorker.answer].onclick();assert.equal(t.state,'playing');assert.equal(t.totalActs,2);assert.equal(t.totalReports,0);t.render();
 // Reports survive sector changes; new people are reportable and full reset clears the totals.
-t.hazards.forEach(h=>h.reported=true);t.workers.forEach(w=>w.reported=true);t.place(4960);t.keys.right=true;step(10);assert.equal(t.sector,2);assert.equal(t.totalActs,2);assert(t.workers.every(w=>!w.reported));
+t.hazards.forEach(h=>h.reported=true);t.workers.forEach(w=>w.reported=true);t.place(6760);t.keys.right=true;step(10);assert.equal(t.sector,2);assert.equal(t.totalActs,2);assert(t.workers.every(w=>!w.reported));
 t.keys.right=false;const climber=t.workers.find(w=>w.id==='noHandrail');let low=climber.feet,high=climber.feet;for(let i=0;i<600;i++){step();low=Math.min(low,climber.feet);high=Math.max(high,climber.feet);}assert(high-low>60,'Worker visibly climbs and descends');
 t.reset();assert.equal(t.totalActs,0);assert(t.workers.every(w=>!w.reported));
 console.log('PASS: moving unsafe actors, wrong/correct answers, separate counts, duplicate protection, inspection pause, stair movement, sector persistence and reset.');
 
 // Every rebuild moves each scenario to a different bay, without overlap or unreachable acts.
-let prior=new Map();
+let prior=new Map(),priorCrossings=[],priorStairs=[];
 for(let layout=0;layout<120;layout++){
  if(layout%8===0){t.reset();t.start();}else t.advanceSector();
  const positions=new Map(t.hazards.map(h=>[h.id,h.x]));for(const walker of t.workers.filter(w=>!w.onStairs))positions.set(walker.id,(walker.min+walker.max)/2);
+ for(const crossing of t.crossings){assert(priorCrossings.every(x=>Math.abs(crossing.x-x)>=50),'Crossing repeated its previous position');assert(t.stairs.every(stair=>crossing.x+crossing.w+60<stair.x||crossing.x-60>stair.x+t.stairWidth(stair)),'Crossing overlaps a staircase');}
+ for(const stair of t.stairs)assert(priorStairs.every(x=>Math.abs(stair.x-x)>=50),'Staircase repeated its previous position');
+ const phone=t.workers.find(w=>w.id==='phoneWalking');assert(phone&&!phone.onStairs&&phone.feet===446,'Phone worker must stay on the warehouse floor');
  for(const [id,x] of positions){
   if(prior.has(id))assert(Math.abs(x-prior.get(id))>100,'Same scenario must change bays');
-  assert(x>100&&x<4920);
+  assert(x>100&&x<6720);
   for(const c of t.crossings)assert(x+70<c.x-t.stopWidth()||x-70>c.x+c.w,'Bay avoids crossings and stop zones');
   for(const stair of t.stairs)assert(x+70<stair.x||x-70>stair.x+t.stairWidth(stair),'Ground bay avoids staircase');
  }
  const points=[...positions.values()];for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++)assert(Math.abs(points[i]-points[j])>170,'Scenes remain separated');
  const actor=t.workers.find(w=>w.id==='noHandrail');assert.equal(actor.feet,t.floorAt(actor.x));assert(actor.feet<446);assert(t.stairs.some(s=>actor.min>s.x&&actor.max<s.x+t.stairWidth(s)));
- prior=positions;
+ prior=positions;priorCrossings=t.crossings.map(c=>c.x);priorStairs=t.stairs.map(s=>s.x);
 }
 console.log('PASS: 120 randomized layouts, no repeated scenario bay, separated objects, clear crossings and valid stair patrols.');

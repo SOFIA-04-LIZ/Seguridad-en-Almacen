@@ -1,10 +1,9 @@
 'use strict';
 (() => {
   const $ = s => document.querySelector(s), canvas = $('#game'), ctx = canvas.getContext('2d');
-  const H=540,FLOOR=446,WORLD=5000, keys={left:false,right:false,jump:false};
+  const H=540,FLOOR=446,WORLD=6800, keys={left:false,right:false,jump:false};
   let W=1200,viewHeight=H;
   const baseStorage=[{x:410,y:391,w:105,h:55},{x:565,y:350,w:110,h:96},{x:1360,y:392,w:105,h:54},{x:1510,y:345,w:110,h:101},{x:2200,y:390,w:110,h:56}];
-  const baseCrossings=[{x:880,w:170,cleared:false,hold:0},{x:1830,w:170,cleared:false,hold:0}];
   const basePallets=[{x:1230,brand:'FLYING FISH',color:'#4b9cb1'},{x:2500,brand:'STELLA',color:'#aa4237'}];
   const equipment=[['helmet','⛑️','Casco de seguridad',true],['vest','🦺','Chaleco de alta visibilidad',true],['boots','🥾','Botas de seguridad',true],['sandals','🩴','Sandalias',false],['cap','🧢','Gorra',false],['headphones','🎧','Audífonos de música',false]];
   const incidentScenarios=window.WAREHOUSE_SCENARIOS.equipment;
@@ -12,12 +11,29 @@
   let sector=1,totalReports=0,totalPallets=0,totalFish=0,totalCoins=0,coinsTowardLife=0,completedStairs=0,totalActs=0;
   const MAX_LIVES=5;
   const previousLocations=new Map();
-  let previousStairRoute='';
+  const previousCrossings=new Map(),previousStairs=new Map();
+  let previousStairRoute='',previousStairSlots='';
   function shuffle(items){const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
+  function variedPosition(slot,previous,range){
+    let position;
+    for(let i=0;i<20;i++){
+      position=slot+Math.floor(Math.random()*(range*2+1))-range;
+      if(previous.get(slot)===undefined||Math.abs(position-previous.get(slot))>=50)break;
+    }
+    if(previous.get(slot)!==undefined&&Math.abs(position-previous.get(slot))<50)position=slot+(previous.get(slot)>slot?-range:range);
+    previous.set(slot,position);
+    return position;
+  }
   function randomLocations(){
-    // Ground bays have space for an object or a short patrol, away from crossings and stairs.
-    const bays=[460,1150,1500,2120,2700,2900,3100,4880];
-    const ids=[...window.WAREHOUSE_SCENARIOS.hazards.map(h=>h.id),...window.WAREHOUSE_SCENARIOS.acts.filter(a=>!['noHandrail','phoneWalking'].includes(a.id)).map(a=>a.id)];
+    // Observation bays stay clear of moving equipment, stairs and the inventory pallets.
+    const bays=[];
+    for(let x=470;x<WORLD-220;x+=190){
+      if(crossings.some(c=>x+85>=c.x-stopWidth()&&x-85<=c.x+c.w))continue;
+      if(stairs.some(s=>x+85>=s.x&&x-85<=s.x+stairWidth(s)))continue;
+      if(pallets.some(p=>x+95>=p.x&&x-95<=p.x+106))continue;
+      bays.push(x);
+    }
+    const ids=[...window.WAREHOUSE_SCENARIOS.hazards.map(h=>h.id),...window.WAREHOUSE_SCENARIOS.acts.filter(a=>a.id!=='noHandrail').map(a=>a.id)];
     function assign(index,available,result){
       if(index===ids.length)return result;
       for(const bay of shuffle(available)){
@@ -28,39 +44,47 @@
       return null;
     }
     const chosen=assign(0,bays,[]),locations=new Map();
+    if(!chosen)throw new Error('No hay espacio para todas las observaciones del sector');
     ids.forEach((id,i)=>{previousLocations.set(id,chosen[i]);locations.set(id,chosen[i]+Math.floor(Math.random()*17)-8);});
     return locations;
   }
   function buildSector(){
-    storage.splice(0,storage.length,...baseStorage.map(p=>({...p})));
-    crossings.splice(0,crossings.length,...baseCrossings.map(c=>({...c,hold:0,cleared:false})));
-    if(sector>=2)crossings.push({x:700,w:130,hold:0,cleared:false});
-    if(sector>=4)crossings.push({x:2350,w:140,hold:0,cleared:false});
     pallets.splice(0,pallets.length,...basePallets.map(p=>({...p,registered:false})));
-    const trapCrossings=[...crossings].sort((a,b)=>a.x-b.x).slice(0,2);trapCrossings.forEach(c=>c.coinTrap=false);
-    const locations=randomLocations();
-    hazards.splice(0,hazards.length,...window.WAREHOUSE_SCENARIOS.hazards.map(h=>({...h,x:locations.get(h.id),reported:false,missed:false})));
-    // Move decorative stock out of the observation bays so people and conditions remain visible.
-    for(let i=storage.length-1;i>=0;i--)if([...locations.values()].some(x=>x+85>storage[i].x&&x-85<storage[i].x+storage[i].w))storage.splice(i,1);
     stairs.length=0;
     const count=sector===1?1:2,steps=Math.min(12,8+sector),tread=Math.max(19,27-sector);
-    for(let i=0;i<count;i++)stairs.push({x:3230+i*750,steps,tread,rise:15,deck:200,completed:false,visitedTop:false});
+    const stairSlots=[3250,4200,5150];
+    let selected=shuffle(stairSlots).slice(0,count).sort((a,b)=>a-b);
+    if(selected.join(',')===previousStairSlots)selected=shuffle(stairSlots.filter(x=>!selected.includes(x))).slice(0,1).concat(selected.slice(0,count-1)).sort((a,b)=>a-b);
+    previousStairSlots=selected.join(',');
+    for(const slot of selected)stairs.push({x:variedPosition(slot,previousStairs,55),steps,tread,rise:15,deck:200,completed:false,visitedTop:false});
+    stairs.sort((a,b)=>a.x-b.x);
+    const crossingSlots=sector===1?shuffle([900,1920,2850]).slice(0,2):shuffle([900,1920,2850,6300]).slice(0,sector>=4?4:3);
+    crossings.splice(0,crossings.length,...crossingSlots.map(slot=>({x:variedPosition(slot,previousCrossings,slot===900?35:slot===2850?90:100),w:slot===900||slot===1920?170:140,hold:0,cleared:false,coinTrap:false})).sort((a,b)=>a.x-b.x));
+    const trapCrossings=crossings.slice(0,2);
+    const locations=randomLocations();
+    hazards.splice(0,hazards.length,...window.WAREHOUSE_SCENARIOS.hazards.map(h=>({...h,x:locations.get(h.id),reported:false,missed:false})));
+    storage.splice(0,storage.length,...baseStorage.filter(p=>
+      ![...locations.values()].some(x=>x+85>p.x&&x-85<p.x+p.w)&&
+      !crossings.some(c=>p.x+p.w>c.x-stopWidth()-30&&p.x<c.x+c.w+30)&&
+      !stairs.some(s=>p.x+p.w>s.x-30&&p.x<s.x+stairWidth(s)+30)).map(p=>({...p})));
     const routes=stairs.flatMap((s,i)=>['up','down'].map(side=>({s,key:i+':'+side,side})));
     const route=shuffle(routes.filter(r=>r.key!==previousStairRoute))[0];previousStairRoute=route.key;
     const run=route.s.steps*route.s.tread;
     workers.splice(0,workers.length,...window.WAREHOUSE_SCENARIOS.acts.map(a=>{
-      const ground=!['noHandrail','phoneWalking'].includes(a.id);
-      const stairSide=a.id==='phoneWalking'?(route.side==='up'?'down':'up'):route.side;
+      const ground=a.id!=='noHandrail';
+      const stairSide=route.side;
       const min=ground?locations.get(a.id)-25:stairSide==='up'?route.s.x+25:route.s.x+run+route.s.deck+15;
       const max=ground?locations.get(a.id)+25:stairSide==='up'?route.s.x+run-15:route.s.x+stairWidth(route.s)-25;
       const x=min+Math.random()*(max-min);
       return {...a,type:'act',onStairs:!ground,reported:false,missed:false,min,max,x,feet:ground?FLOOR:floorAt(x),direction:Math.random()<.5?-1:1,phase:Math.random()*Math.PI*2};
     }));
     noJumpZones.splice(0,noJumpZones.length,...storage.map(p=>({x:p.x-8,w:p.w+16})),...pallets.map(p=>({x:p.x-10,w:124})),...hazards.map(h=>({x:h.x-48,w:96})));
-    const tokenSpots=[560,780,1180,1750,2260,2680,3130,4180,4590].filter(x=>
+    const tokenSpots=[];
+    for(let x=500;x<WORLD-180;x+=150)if(
       noJumpZones.every(z=>x<z.x-70||x>z.x+z.w+70)&&
       crossings.every(c=>x<c.x-stopWidth()-70||x>c.x+c.w+70)&&
-      stairs.every(st=>x<st.x-70||x>st.x+stairWidth(st)+70));
+      stairs.every(st=>x<st.x-70||x>st.x+stairWidth(st)+70)&&
+      workers.every(w=>w.onStairs||x<w.min-90||x>w.max+90))tokenSpots.push(x);
     focusTokens.splice(0,focusTokens.length,...shuffle(tokenSpots).slice(0,Math.min(3,tokenSpots.length)).map(x=>({x,y:350,collected:false})));
     const safeSpots=[];for(let x=190;x<WORLD-90;x+=165){if(noJumpZones.some(z=>x>z.x-55&&x<z.x+z.w+55)||crossings.some(c=>x>c.x-stopWidth()-45&&x<c.x+c.w+45)||stairs.some(st=>x>st.x-50&&x<st.x+stairWidth(st)+50)||workers.some(w=>!w.onStairs&&x>w.min-65&&x<w.max+65))continue;safeSpots.push(x);}
     coins.splice(0,coins.length,...safeSpots.map(x=>({x,y:400,collected:false,risky:false})),...trapCrossings.map(c=>({x:c.x+c.w/2,y:400,collected:false,risky:true,crossing:c,active:false,expired:false,timeLeft:1})));

@@ -76,7 +76,7 @@ Los actos se contabilizan por separado de las condiciones del entorno. Cada sect
 
 ## Ubicaciones variables
 
-Cada partida y cada sector redistribuyen las cinco condiciones y las tres personas de la ruta peatonal entre zonas de observación distintas. Ninguna de esas escenas repite la misma zona que ocupó en la distribución anterior. Se conserva separación entre escenas y se evitan cruces, zonas de alto y escaleras.
+Cada partida y cada sector redistribuyen los cruces de montacargas, las escaleras, las cinco condiciones y las cuatro personas que caminan por el piso. Los cruces y las escaleras cambian de posición entre sectores; las zonas de observación se eligen después para que no queden dentro de ellos. Ninguna condición o persona del piso repite la misma zona que ocupó en la distribución anterior.
 
 La persona que no usa el pasamanos cambia de tramo de escalera y, cuando hay varias escaleras, también puede cambiar de escalera. Su posición inicial y dirección de marcha varían. Las posiciones se mantienen durante el sector; pausar o abrir una inspección no cambia la distribución.
 
