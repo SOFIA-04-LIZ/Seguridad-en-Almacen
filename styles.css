@@ -334,3 +334,13 @@ body:has(#overlay.ready){overflow:auto}
 .control-list kbd{min-width:32px;padding:7px 9px;font-size:12px}
 .how-to-play p{margin:12px 0 0;font-size:13px}
 @media(max-width:700px){.how-to-play{padding:12px;margin-top:14px}.control-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.control-list span{font-size:12px}.control-list kbd{padding:6px;min-width:30px}.how-to-play p{font-size:12px}}
+
+@media(max-width:700px){
+ .control-list{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:3px;overflow-x:auto;scrollbar-width:none}
+ .control-list::-webkit-scrollbar{display:none}
+ .control-list span{flex:none;gap:2px;font-size:0}
+ .control-list span::after{content:attr(data-mobile);font-size:clamp(9px,2.5vw,10px);line-height:1;white-space:nowrap}
+ .control-list kbd{min-width:0;padding:3px 4px;font-size:clamp(9px,2.5vw,10px);line-height:1}
+ .control-list span:nth-child(3) kbd{font-size:0}
+ .control-list span:nth-child(3) kbd::after{content:'ESP';font-size:clamp(8px,2.3vw,9px)}
+}

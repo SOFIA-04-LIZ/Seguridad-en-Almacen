@@ -22,6 +22,7 @@ frame.onload=async()=>{
  check(box('.setup').bottom<=box('.game-shell').top+1,'instructions must precede the game');
  check(doc.querySelector('.setup .how-to-play')&&box('.how-to-play').bottom<=box('.setup').bottom+1,'control guide must be inside the instructions');
  check(!doc.querySelector('.game-shell .controls'),'control strip remains under the game');
+ if(width<=700){const labels=[...doc.querySelectorAll('.control-list span')].map(el=>el.getBoundingClientRect());check(labels.every(r=>Math.abs(r.top-labels[0].top)<2),'mobile controls wrap to another line');check(labels.at(-1).right<=box('.control-list').right+1,'mobile controls are clipped');}
  check(!doc.querySelector('.objectives'),'old objective cards remain');
  check(box('.header-note').right<=width+1,'header note clipped');
  check(!doc.querySelector('#act-list')&&!doc.querySelector('#hazard-list'),'extra status chips visible');
