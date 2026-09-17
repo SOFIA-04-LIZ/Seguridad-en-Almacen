@@ -42,7 +42,7 @@ button{touch-action:manipulation}
 .toolbar button{min-width:44px;min-height:44px}
 .stage{isolation:isolate}
 canvas{position:absolute;inset:0;width:100%;height:100%}
-#modal{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;overflow-wrap:anywhere}
+#modal{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;overflow-wrap:break-word}
 .primary,.secondary,.hazard-options button{min-height:48px}
 .touch{padding:10px;background:#171717;margin:0;border-top:1px solid #625225}
 .touch button{min-height:52px;min-width:0;font-size:15px;-webkit-touch-callout:none}
@@ -55,7 +55,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 @media(max-width:800px){
  header{height:auto;min-height:64px;padding-block:10px;gap:12px}
  .hero{padding:22px 0}.hero h1{font-size:clamp(38px,10vw,60px)}
- .intro{font-size:13px;overflow-wrap:anywhere}.intro br{display:none}
+ .intro{font-size:13px;overflow-wrap:break-word}
  .edition{display:none}
  .toolbar{display:grid;grid-template-columns:1fr;gap:5px;padding:8px 10px;font-size:10px;min-height:0}
  .toolbar>div{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) 44px 44px;gap:6px;align-items:center}
@@ -106,3 +106,53 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
  .equipment{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(prefers-reduced-motion:reduce){#toast{transition:none}.touch button:active{transform:none}}
+
+/* Títulos y textos: una sola columna antes de que el lateral se comprima. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:40px;align-items:center}
+.hero h1{font-size:clamp(40px,5.5vw,64px);line-height:1.08;letter-spacing:-.5px}
+.hero h1>span,.hero h1>em{display:block}
+.hero .eyebrow{line-height:1.6;letter-spacing:1.3px}
+.hero .intro{font-size:16px;line-height:1.65;max-width:62ch;margin-top:18px}
+.hero aside{width:100%;min-width:0}
+.hero aside h2{font-size:36px;line-height:1.12;word-break:normal;overflow-wrap:normal}
+.hero aside small{font-size:11px;line-height:1.6;letter-spacing:.7px}
+#modal{min-width:0;word-break:normal;overflow-wrap:break-word}
+#modal h2{line-height:1.15;margin-bottom:12px}
+#modal p{font-size:16px;line-height:1.6}
+#modal .tiny,#modal .feedback{font-size:14px;line-height:1.55}
+.equipment button{font-size:14px;line-height:1.4;min-width:0}
+.hazard-options button,.primary,.secondary{font-size:15px;line-height:1.45;white-space:normal}
+@media(max-width:1100px){
+ .hero{grid-template-columns:minmax(0,1fr);gap:22px;padding:28px 0}
+ .hero h1{font-size:clamp(34px,7vw,56px)}
+ .hero aside{display:block;border-left:3px solid var(--lime);padding:4px 0 4px 16px}
+ .hero aside h2{font-size:26px;line-height:1.2;margin:5px 0}
+ .hero aside small{font-size:11px}
+ .hero .intro{max-width:60ch}
+ #modal h2{font-size:28px}
+ .cards h3{font-size:16px;line-height:1.35}
+ .cards p{font-size:14px;line-height:1.6}
+ .section-title h2{font-size:28px;line-height:1.2}
+}
+@media(max-width:600px){
+ .hero{padding:24px 4px;gap:20px}
+ .hero h1{font-size:clamp(32px,8.4vw,46px);line-height:1.12}
+ .hero .eyebrow{font-size:10px;letter-spacing:1px;margin-bottom:12px}
+ .hero .intro{font-size:16px;line-height:1.65}
+ .hero aside h2{font-size:25px}
+ .brand>span{font-size:12px;line-height:1.3;letter-spacing:.5px}
+ .brand small{font-size:8px;letter-spacing:1px;line-height:1.5}
+ #modal{padding:20px 16px}
+ #modal h2{font-size:27px}
+ #modal p{font-size:16px}
+ #modal .eyebrow{font-size:11px;letter-spacing:1px}
+ .equipment{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .equipment button{font-size:14px;min-height:90px}
+ .section-title{align-items:flex-start;gap:10px}
+}
+@media(max-height:550px) and (orientation:landscape) and (max-width:1100px){
+ .hero{display:none}
+ #modal{padding:16px 20px}
+ .equipment{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
