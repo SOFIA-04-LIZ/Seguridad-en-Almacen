@@ -13,6 +13,7 @@ frame.onload=async()=>{
  if(win.getComputedStyle(hero).display!=='none'){
   const title=box('.hero h1');
   check(title.left>=0&&title.right<=width,'heading clipped');
+  if(width<=700)check(parseFloat(win.getComputedStyle(doc.querySelector('.hero h1')).fontSize)>=32,'mobile heading too small');
   check(!doc.querySelector('.hero aside'),'old mission panel remains');
   check(doc.querySelector('.intro').textContent.includes('Flying Fish. Cada'),'intro sentences run together');
  }
