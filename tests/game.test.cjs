@@ -70,7 +70,7 @@ vm.runInContext(
 );
 const code = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8').replace(
   /reset\(\);\s*requestAnimationFrame\(frame\);/,
-  `reset();globalThis.test={update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
+  `reset();globalThis.test={finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
  get sector(){return sector},get totalFish(){return totalFish},get totalCoins(){return totalCoins},get fishFound(){return fishFound},get streak(){return streak},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
  get player(){return player},get state(){return state},get lives(){return lives},get worn(){return worn},get epp(){return epp},get incident(){return incident},get triggered(){return triggered},get found(){return found},
  start(ids=['helmet','vest','boots']){worn=new Set(ids);state='playing';hud()},
@@ -585,3 +585,24 @@ for (let layout = 0; layout < 120; layout++) {
 console.log(
   'PASS: 120 randomized layouts, no repeated scenario bay, separated objects, clear crossings and valid stair patrols.',
 );
+
+// Final inventory includes every started sector and resets with a new game.
+t.reset();
+t.start();
+assert.match(t.inventorySummary(), /Stella Artois<\/th><td>0 de 1<\/td><td>1/);
+assert.match(t.inventorySummary(), /diferencia de inventario de 2 tarimas/);
+t.place(2500);
+t.interact();
+assert.match(t.inventorySummary(), /Stella Artois<\/th><td>1 de 1<\/td><td>0/);
+assert.match(t.inventorySummary(), /diferencia de inventario de 1 tarima por/);
+t.place(1230);
+t.interact();
+assert.match(t.inventorySummary(), /No hay diferencia de inventario/);
+t.advanceSector();
+assert.match(t.inventorySummary(), /Flying Fish<\/th><td>1 de 2<\/td><td>1/);
+t.finish();
+assert.match($('#modal').innerHTML, /Inventario de tarimas/);
+assert.match($('#modal').innerHTML, /diferencia de inventario de 2 tarimas/);
+t.reset();
+assert.match(t.inventorySummary(), /Stella Artois<\/th><td>0 de 1<\/td><td>1/);
+console.log('PASS: final inventory counts, missing pallets, complete inventory, cumulative sectors and reset.');

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="112" viewBox="0 0 160 112">
+  <path fill="#a6deec" d="M4 18 135 18 156 4 25 4Z"/>
+  <path fill="#16768d" d="M135 18 156 4 156 92 135 108Z"/>
+  <path fill="#50bfd5" stroke="#17768e" stroke-width="2" d="M4 18H135V108H4Z"/>
+  <path fill="#e9f8ed" d="M42 39Q63 26 85 38L102 29 98 42 105 51 85 45Q63 56 42 39Z"/>
+  <path fill="#e9f8ed" d="m62 35-6-13 25 12Z"/>
+  <circle cx="49" cy="39" r="2" fill="#123b55"/>
+  <g fill="#123b55" font-family="Arial,sans-serif" text-anchor="middle" font-weight="900"><text x="69" y="70" font-size="20">FLYING</text><text x="69" y="91" font-size="23">FISH</text></g>
+  <path stroke="#cff5ef" stroke-width="2" d="M17 99h105M70 5l-9 12"/>
+</svg>

@@ -46,6 +46,11 @@
           Cinco monedas tomadas en la ruta segura te dan una vida; ninguna moneda vale
           entrar a un cruce en rojo.
         </p>
+        <div class="product-guide" aria-label="Presentaciones que debes encontrar">
+          <strong>Busca estas cajitas en las tarimas:</strong>
+          <figure><img id="stella-box" src="assets/stella-box.svg" alt="Caja Stella Artois color crema con etiqueta roja" width="160" height="112" /><figcaption>Stella Artois</figcaption></figure>
+          <figure><img id="fish-box" src="assets/flying-fish-box.svg" alt="Caja Flying Fish color azul con un pez" width="160" height="112" /><figcaption>Flying Fish</figcaption></figure>
+        </div>
         <div class="instructions">
           <div>
             <b>01 · Prepárate</b>
@@ -99,31 +104,38 @@
           <div class="hud-row">
             <div class="hud-stats" aria-label="Marcadores del juego">
               <span class="hud-stat" data-short="VIDAS">
+                <span class="hud-icon" aria-hidden="true">♥</span>
                 <span class="stat-label">VIDAS</span>
                 <b id="lives">♥ ♥ ♥</b>
                 <b id="life-number">3/5</b>
               </span>
               <span class="hud-stat" data-short="STELLA">
+                <img class="hud-box" src="assets/stella-box.svg" alt="Caja Stella" width="24" height="17" />
                 <span class="stat-label">STELLA</span>
                 <b id="count">0</b>
               </span>
               <span class="hud-stat" data-short="FISH">
+                <img class="hud-box" src="assets/flying-fish-box.svg" alt="Caja Flying Fish" width="24" height="17" />
                 <span class="stat-label">FLYING FISH</span>
                 <b id="fish-count">0</b>
               </span>
               <span class="hud-stat" data-short="MON.">
+                <span class="hud-icon" aria-hidden="true">🪙</span>
                 <span class="stat-label">MONEDAS</span>
                 <b id="coin-count">0</b>
               </span>
               <span class="hud-stat" data-short="SEC.">
+                <span class="hud-icon" aria-hidden="true">🏭</span>
                 <span class="stat-label">SECTOR</span>
                 <b id="sector">1</b>
               </span>
               <span class="hud-stat" data-short="ACT.">
+                <span class="hud-icon" aria-hidden="true">👷</span>
                 <span class="stat-label">ACTOS</span>
                 <b id="act-count">0</b>
               </span>
               <span class="hud-stat" data-short="REP.">
+                <span class="hud-icon" aria-hidden="true">📋</span>
                 <span class="stat-label">REPORTES</span>
                 <b id="hazard-count">0</b>
               </span>

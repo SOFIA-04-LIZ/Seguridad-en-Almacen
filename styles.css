@@ -1995,3 +1995,71 @@ body:has(#overlay.ready) {
     margin-left: 0;
   }
 }
+/* Shared package illustrations in the mission and inventory counters. */
+.product-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px 76px;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid #55513b;
+  border-radius: 8px;
+  background: #181818;
+}
+.product-guide > strong {
+  min-width: 0;
+  font-size: 13px;
+  color: #ffe079;
+}
+.product-guide figure {
+  margin: 0;
+  text-align: center;
+}
+.product-guide img {
+  display: block;
+  width: 64px;
+  max-width: 100%;
+  margin: 0 auto;
+  height: auto;
+}
+.product-guide figcaption {
+  margin-top: 3px;
+  color: #fff6df;
+  font-size: 11px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.hud-box {
+  display: inline-block;
+  width: 24px;
+  height: 17px;
+  object-fit: contain;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+@media (max-width: 480px) {
+  .product-guide {
+    grid-template-columns: minmax(0, 1fr) 60px 60px;
+    gap: 6px;
+    padding: 8px;
+  }
+  .product-guide > strong { font-size: 11px; }
+  .product-guide img { width: 48px; }
+  .product-guide figcaption { font-size: 10px; }
+}
+
+.hud-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 17px;
+  font-size: 15px;
+  line-height: 1;
+  color: #ffc600;
+  flex-shrink: 0;
+}
+.inventory-result { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+.inventory-result th, .inventory-result td { padding: 8px 4px; text-align: left; border-bottom: 1px solid #55513b; }
+.inventory-difference { color: #ffe079; }

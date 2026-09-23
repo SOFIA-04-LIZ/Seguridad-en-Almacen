@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="112" viewBox="0 0 160 112">
+  <path fill="#e6cf99" d="M4 18 135 18 156 4 25 4Z"/>
+  <path fill="#a88a53" d="M135 18 156 4 156 92 135 108Z"/>
+  <path fill="#f6ebcc" stroke="#b7995d" stroke-width="2" d="M4 18H135V108H4Z"/>
+  <path fill="#bc2534" d="M4 81H135V101H4Z"/>
+  <path fill="#c29a49" d="m58 33 5-10 7 7 7-7 5 10Z"/>
+  <path fill="#b92432" stroke="#c29a49" stroke-width="2" d="M25 42Q69 30 114 42L108 70Q69 83 31 70Z"/>
+  <g fill="#fff" font-family="Georgia,serif" text-anchor="middle" font-weight="bold"><text x="69" y="56" font-size="15">STELLA</text><text x="69" y="69" font-size="10">ARTOIS</text></g>
+  <path stroke="#d5bd84" stroke-width="2" d="m70 5-9 12M143 30v57"/>
+</svg>

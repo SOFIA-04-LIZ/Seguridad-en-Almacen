@@ -628,6 +628,21 @@
       $('#overlay').classList.add('hidden');
     }
   }
+  function inventorySummary() {
+    const rows = [
+      { name: 'Stella Artois', brand: 'STELLA', detected: totalPallets },
+      { name: 'Flying Fish', brand: 'FLYING FISH', detected: totalFish },
+    ].map((item) => {
+      const expected = basePallets.filter((p) => p.brand === item.brand).length * sector;
+      return { ...item, expected, missing: Math.max(0, expected - item.detected) };
+    });
+    const missing = rows.reduce((sum, item) => sum + item.missing, 0);
+    return '<h3>Inventario de tarimas</h3><p>Incluye todas las tarimas de los sectores iniciados, también las que no alcanzaste a recorrer.</p>' +
+      '<table class="inventory-result"><thead><tr><th scope="col">Presentación</th><th scope="col">Detectadas</th><th scope="col">Faltantes</th></tr></thead><tbody>' +
+      rows.map((item) => '<tr><th scope="row">' + item.name + '</th><td>' + item.detected + ' de ' + item.expected + '</td><td>' + item.missing + '</td></tr>').join('') +
+      '</tbody></table><p class="inventory-difference">' +
+      (missing > 0 ? 'También tenemos una diferencia de inventario de ' + missing + (missing === 1 ? ' tarima' : ' tarimas') + ' por no detectar y registrar todas las tarimas.' : '¡Detectaste todas las tarimas! No hay diferencia de inventario.') + '</p>';
+  }
   function finish() {
     state = 'lost';
     clearKeys();
@@ -648,7 +663,7 @@
       totalActs +
       '</span><span>Escaleras: ' +
       completedStairs +
-      '</span></div><button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button>';
+      '</span></div>' + inventorySummary() + '<button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button>';
     $('#again').onclick = () => {
       const gear = new Set(worn);
       reset();
@@ -1071,6 +1086,11 @@
     ctx.stroke();
   }
   function box(x, y, w = 46, h = 36, brand = 'CERVEZA', color = '#bfac79') {
+    const artwork = brand === 'STELLA' ? $('#stella-box') : brand === 'FISH' ? $('#fish-box') : null;
+    if (artwork && artwork.complete && artwork.naturalWidth > 0) {
+      ctx.drawImage(artwork, x, y, w, h);
+      return;
+    }
     rect(x, y, w, h, color);
     rect(x + 3, y + 3, w - 6, h - 6, '#ffffff0d');
     line(x + w / 2, y, x + w / 2, y + 8, '#84754c', 2);
@@ -1325,11 +1345,13 @@
       rect(7, -46, 4, 23, '#fff1c1');
       rect(-15, -31, 30, 4, '#fff1c1');
     }
-    // Both hands remain at the hips, visibly below and away from the handrail.
+    // The phone hand is raised; other workers keep both hands by their hips.
     rect(-22, -45, 7, 20, '#495361');
-    rect(15, -45, 7, 20, '#495361');
     rect(-22, -25, 7, 6, '#d6a074');
-    rect(15, -25, 7, 6, '#d6a074');
+    if (worker.id !== 'phoneWalking') {
+      rect(15, -45, 7, 20, '#495361');
+      rect(15, -25, 7, 6, '#d6a074');
+    }
     rect(-9, -64, 21, 17, '#d6a074');
     rect(-11, -67, 23, 7, '#38281e');
     rect(-11, -63, 5, 10, '#38281e');
@@ -1339,9 +1361,11 @@
       rect(-15, -60, 33, 4, '#fffdf4');
     }
     if (worker.id === 'phoneWalking') {
-      line(18, -42, 15, -59, '#495361', 7);
+      line(17, -44, 25, -36, '#495361', 7);
+      line(25, -36, 18, -55, '#495361', 7);
       rect(11, -65, 7, 15, '#101820');
       rect(13, -63, 3, 9, '#83c4d8');
+      rect(16, -57, 6, 7, '#d6a074');
     }
     rect(7, -56, 3, 3, '#222');
     ctx.restore();
