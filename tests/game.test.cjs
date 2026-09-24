@@ -70,7 +70,7 @@ vm.runInContext(
 );
 const code = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8').replace(
   /reset\(\);\s*requestAnimationFrame\(frame\);/,
-  `reset();globalThis.test={toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
+  `reset();globalThis.test={pallets,inventoryReach,inspectHazard,world:WORLD,toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
  get sector(){return sector},get totalFish(){return totalFish},get totalCoins(){return totalCoins},get fishFound(){return fishFound},get streak(){return streak},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
  get player(){return player},get state(){return state},get lives(){return lives},get worn(){return worn},get epp(){return epp},get incident(){return incident},get triggered(){return triggered},get found(){return found},
  start(ids=['helmet','vest','boots']){worn=new Set(ids);state='playing';hud()},
@@ -499,7 +499,7 @@ t.render();
 // Reports survive sector changes; new people are reportable and full reset clears the totals.
 t.hazards.forEach((h) => (h.reported = true));
 t.workers.forEach((w) => (w.reported = true));
-t.place(6760);
+t.place(t.world - 40);
 t.keys.right = true;
 step(10);
 assert.equal(t.sector, 2);
@@ -561,7 +561,7 @@ for (let layout = 0; layout < 120; layout++) {
   for (const [id, x] of positions) {
     if (prior.has(id))
       assert(Math.abs(x - prior.get(id)) > 100, 'Same scenario must change bays');
-    assert(x > 100 && x < 6720);
+    assert(x > 100 && x < t.world - 80);
     for (const c of t.crossings)
       assert(
         x + 70 < c.x - t.stopWidth() || x - 70 > c.x + c.w,
@@ -624,7 +624,7 @@ t.advanceSector();
 t.place(130);
 t.update(0);
 assert.equal(t.scoreSummary().distance, 300);
-t.place(2500);
+t.place(t.pallets.find(p => p.brand === 'STELLA').x + 37);
 t.interact();
 t.interact();
 assert.equal(t.scoreSummary().inventory, 100);
@@ -698,3 +698,59 @@ assert.equal(t.lives, 2, 'Releasing while climbing is also unsafe');
 t.reset();
 assert.equal(t.railHeld, false);
 console.log('PASS: shared interaction, safe grip, missed/released handrail penalty, no duplicate penalty, new sectors and final-life results.');
+
+// Learned observations skip later quizzes but each new object still needs reporting.
+for (const type of ['hazard', 'act']) {
+  t.reset(); t.start();
+  const original = type === 'act' ? t.workers[0] : t.hazards[0];
+  t.inspectHazard(original);
+  assert.equal(t.state, 'inspection');
+  $('.hazard-options').children[(original.answer + 1) % 3].onclick();
+  assert(!original.reported);
+  $('.hazard-options').children[original.answer].onclick();
+  assert(original.reported);
+  t.inspectHazard(original);
+  assert.equal(t.state, 'playing');
+  t.advanceSector();
+  const repeated = (type === 'act' ? t.workers : t.hazards).find(h => h.id === original.id);
+  assert(!repeated.reported);
+  t.inspectHazard(repeated);
+  assert.equal(t.state, 'playing');
+  assert(repeated.reported);
+  assert.equal(type === 'act' ? t.totalActs : t.totalReports, 2);
+  t.inspectHazard(repeated);
+  assert.equal(type === 'act' ? t.totalActs : t.totalReports, 2);
+  t.reset(); t.start();
+  t.inspectHazard(type === 'act' ? t.workers[0] : t.hazards[0]);
+  assert.equal(t.state, 'inspection', 'New game resets learned observations');
+}
+// Mixed clusters grow and only the nearest target pallet can add inventory.
+t.reset(); t.start();
+let expectedStella = 0, expectedFish = 0;
+for (let level = 1; level <= 12; level++) {
+  const targets = t.pallets.filter(p => ['STELLA','FLYING FISH'].includes(p.brand));
+  assert.equal(targets.length, level === 1 ? 2 : Math.min(4, level));
+  assert.equal(t.pallets.length, level === 1 ? 2 : targets.length * 2);
+  expectedStella += targets.filter(p => p.brand === 'STELLA').length;
+  expectedFish += targets.filter(p => p.brand === 'FLYING FISH').length;
+  for (const pallet of t.pallets) {
+    assert(t.crossings.every(c => pallet.x + 114 < c.x - t.stopWidth() || pallet.x > c.x + c.w));
+    assert(t.stairs.every(st => pallet.x + 114 < st.x || pallet.x > st.x + t.stairWidth(st)));
+  }
+  t.hazards.forEach(h => h.reported = true);
+  t.workers.forEach(w => w.reported = true);
+  for (const pallet of t.pallets) {
+    const before = t.totalPallets + t.totalFish;
+    t.place(pallet.x + 37);
+    t.interact();
+    const target = targets.includes(pallet);
+    assert.equal(t.totalPallets + t.totalFish, before + Number(target));
+    t.interact();
+    assert.equal(t.totalPallets + t.totalFish, before + Number(target));
+  }
+  assert.equal(t.totalPallets, expectedStella);
+  assert.equal(t.totalFish, expectedFish);
+  assert.match(t.inventorySummary(), /No hay diferencia de inventario/);
+  if (level < 12) t.advanceSector();
+}
+console.log('PASS: learned report types, reset, 12 sectors of mixed inventory, distractors, nearest selection, safe placement and actual cumulative totals.');

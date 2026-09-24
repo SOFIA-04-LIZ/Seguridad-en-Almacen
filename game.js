@@ -5,7 +5,7 @@
     ctx = canvas.getContext('2d');
   const H = 540,
     FLOOR = 446,
-    WORLD = 6800,
+    WORLD = 8000,
     keys = { left: false, right: false, jump: false };
   let W = 1200,
     viewHeight = H;
@@ -38,6 +38,8 @@
     noJumpZones = [],
     focusTokens = [],
     coins = [];
+  const learnedReports = new Set();
+  const previousInventory = { STELLA: 0, 'FLYING FISH': 0 };
   let railHeld = false;
   let sector = 1,
     completedDistance = 0,
@@ -120,12 +122,26 @@
     });
     return locations;
   }
+  function buildInventory() {
+    if (sector === 1) {
+      pallets.splice(0, pallets.length, ...basePallets.map(p => ({ ...p, registered: false })));
+      return;
+    }
+    const count = Math.min(4, sector);
+    const brands = [
+      ...Array.from({ length: Math.ceil(count / 2) }, () => ({ brand: 'STELLA', color: '#aa4237' })),
+      ...Array.from({ length: Math.floor(count / 2) }, () => ({ brand: 'FLYING FISH', color: '#4b9cb1' })),
+      ...Array.from({ length: count }, (_, i) => ({ brand: i % 2 ? 'VICTORIA' : 'CORONA', color: i % 2 ? '#aa4237' : '#4b9cb1' })),
+    ];
+    const mixed = shuffle(brands);
+    const spacing = Math.max(106, 118 - sector * 2);
+    pallets.splice(0, pallets.length, ...mixed.map((p, i) => ({
+      ...p, x: (i < count ? 1140 : 2180) + (i % count) * spacing, registered: false,
+    })));
+  }
+  function inventoryReach() { return sector === 1 ? 115 : Math.max(36, 78 - sector * 6); }
   function buildSector() {
-    pallets.splice(
-      0,
-      pallets.length,
-      ...basePallets.map((p) => ({ ...p, registered: false })),
-    );
+    buildInventory();
     stairs.length = 0;
     const count = sector === 1 ? 1 : 2,
       steps = Math.min(12, 8 + sector),
@@ -190,6 +206,7 @@
       ...baseStorage
         .filter(
           (p) =>
+            !pallets.some((item) => item.x + 114 > p.x && item.x < p.x + p.w) &&
             ![...locations.values()].some((x) => x + 85 > p.x && x - 85 < p.x + p.w) &&
             !crossings.some(
               (c) => p.x + p.w > c.x - stopWidth() - 30 && p.x < c.x + c.w + 30,
@@ -306,6 +323,7 @@
     return FLOOR - n * s.rise;
   }
   function advanceSector() {
+    for (const p of pallets) if (p.brand in previousInventory) previousInventory[p.brand]++;
     railHeld = false;
     completedDistance += sectorProgress;
     sectorProgress = 0;
@@ -389,6 +407,8 @@
     $('#streak').textContent = streak;
   }
   function reset() {
+    learnedReports.clear();
+    previousInventory.STELLA = previousInventory['FLYING FISH'] = 0;
     railHeld = false;
     sector = 1;
     completedDistance = sectorProgress = 0;
@@ -582,7 +602,22 @@
       toast('Equipo corregido.', 4);
     };
   }
+  function reportObservation(h) {
+    if (h.reported) return;
+    h.reported = true;
+    learnedReports.add((h.type === 'act' ? 'act:' : 'hazard:') + h.id);
+    if (h.type === 'act') totalActs++;
+    else totalReports++;
+    streak++;
+    hud();
+    toast(h.type === 'act' ? '✓ Acto reportado' : '✓ Condición reportada', 2);
+  }
   function inspectHazard(h) {
+    if (h.reported) { toast('✓ Ya reportaste esta situación.', 2); return; }
+    if (learnedReports.has((h.type === 'act' ? 'act:' : 'hazard:') + h.id)) {
+      reportObservation(h);
+      return;
+    }
     const isAct = h.type === 'act';
     state = 'inspection';
     clearKeys();
@@ -602,13 +637,8 @@
           return;
         }
         if (h.reported) return;
-        h.reported = true;
-        if (isAct) totalActs++;
-        else totalReports++;
-        streak++;
-        hud();
+        reportObservation(h);
         closeInspection();
-        toast(isAct ? '✓ Acto reportado' : '✓ Condición reportada', 2);
       };
       $('.hazard-options').append(b);
     });
@@ -641,7 +671,7 @@
       { name: 'Stella Artois', brand: 'STELLA', detected: totalPallets },
       { name: 'Flying Fish', brand: 'FLYING FISH', detected: totalFish },
     ].map((item) => {
-      const expected = basePallets.filter((p) => p.brand === item.brand).length * sector;
+      const expected = previousInventory[item.brand] + pallets.filter((p) => p.brand === item.brand).length;
       return { ...item, expected, missing: Math.max(0, expected - item.detected) };
     });
     const missing = rows.reduce((sum, item) => sum + item.missing, 0);
@@ -726,16 +756,15 @@
       toggleHandrail();
       return;
     }
-    const p = pallets.find(
-      (p) =>
-        Math.abs(player.x + 16 - (p.x + 53)) < 115 && player.ground && player.y > 300,
-    );
+    const p = pallets
+      .filter(p => Math.abs(player.x + 16 - (p.x + 53)) < inventoryReach() && player.ground && player.y > 300)
+      .sort((a, b) => Math.abs(player.x + 16 - (a.x + 53)) - Math.abs(player.x + 16 - (b.x + 53)))[0];
     if (!p) {
       toast('No se registró ninguna interacción.', 2);
       return;
     }
     if (!['STELLA', 'FLYING FISH'].includes(p.brand)) {
-      toast('Esta tarima es de ' + p.brand + '.', 2);
+      toast('Esta tarima es de ' + p.brand + '. Busca Stella o Flying Fish.', 2);
       return;
     }
     if (p.registered) {
@@ -1161,7 +1190,7 @@
       x + w / 2,
       y + h * 0.62,
       brand === 'STELLA' ? 7 : 6,
-      brand === 'STELLA' ? '#fff6df' : '#504c35',
+      ['STELLA', 'CORONA', 'VICTORIA'].includes(brand) ? '#fff6df' : '#504c35',
       'center',
     );
     if (brand === 'STELLA')
@@ -1182,8 +1211,7 @@
         );
     rect(p.x - 5, FLOOR - 12, 114, 7, '#96764e');
     for (let i = 0; i < 3; i++) rect(p.x + i * 47, FLOOR - 5, 13, 5, '#665237');
-    if (p.brand === 'FLYING FISH')
-      text('FLYING FISH', p.x + 51, FLOOR - 112, 11, '#d4f7ff', 'center');
+    text(p.brand, p.x + 51, FLOOR - 112, 10, '#f4f4ed', 'center');
     if (p.registered)
       text('✓ REGISTRADA', p.x + 51, FLOOR - 103, 11, '#ffe079', 'center');
     ctx.restore();

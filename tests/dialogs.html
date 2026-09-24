@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Mobile dialog fit checks</title>
+<title>All-device dialog fit checks</title>
 <pre id="results">RUNNING</pre>
 <iframe id="app" style="border:0"></iframe>
 <script>
@@ -12,14 +12,14 @@
       fetch('../game.js').then(r => r.text())
     ]);
     const code = game.replace(/reset\(\);\s*requestAnimationFrame\(frame\);/,
-      `reset();window.dialogTest={showEquipment,finish,largeResult(){sector=99;totalPallets=98;totalFish=97;totalReports=490;totalActs=480;completedDistance=650000;finish()}};`);
+      `reset();window.dialogTest={showEquipment,finish,largeResult(){sector=99;previousInventory.STELLA=196;previousInventory['FLYING FISH']=195;totalPallets=98;totalFish=97;totalReports=490;totalActs=480;completedDistance=650000;finish()}};`);
     const frame = document.querySelector('#app');
     const ready = new Promise(resolve => frame.onload = resolve);
     frame.srcdoc = html.replace('<head>', '<head><base href="' + new URL('../', location.href) + '">')
       .replace(/<script src="game.js[^>]*><\/script>/, '')
       .replace('</body>', () => '<script>window.addEventListener("load",()=>{' + code + '});<\/script></body>');
     await ready;
-    const sizes = [[320,480],[320,568],[360,640],[390,844],[430,932],[568,320],[667,375],[844,390],[932,430],[768,1024],[980,1200]];
+    const sizes = [[320,480],[320,568],[360,640],[390,844],[430,932],[568,320],[667,375],[844,390],[932,430],[768,1024],[980,1200],[1024,768],[1024,600],[1180,820],[1280,720],[1366,768],[1440,900],[1920,1080],[2560,1440],[1280,600],[1440,450],[800,600],[600,450]];
     const lines = [];
     for (const [width,height] of sizes) {
       frame.style.width = width+'px'; frame.style.height = height+'px';

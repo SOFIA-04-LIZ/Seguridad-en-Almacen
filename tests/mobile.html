@@ -106,7 +106,7 @@
             );
             check(
               doc.documentElement.scrollWidth <= width + 1,
-              'horizontal page overflow',
+              'horizontal page overflow: ' + [...doc.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > width + 1 || el.scrollWidth > el.clientWidth + 1).slice(0, 8).map(el => el.tagName + '.' + el.className + ':' + Math.round(el.getBoundingClientRect().right) + '/' + el.scrollWidth + '/' + el.clientWidth).join(', '),
             );
             doc.querySelector('#overlay').classList.add('hidden');
             await wait();

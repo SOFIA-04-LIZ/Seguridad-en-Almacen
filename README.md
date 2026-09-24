@@ -90,3 +90,9 @@ Los objetos no muestran signos de admiración, avisos de proximidad ni indicacio
 El juego y las ilustraciones funcionan sin conexión. Las fuentes de Google son opcionales y tienen alternativas locales. No hay bibliotecas ni recursos gráficos externos obligatorios.
 
 Simulación educativa: la selección de EPP corresponde a este escenario ficticio. El equipo real depende de los riesgos, las tareas y las reglas del centro. El EPP no sustituye las rutas seguras ni el control de cargas y vehículos.
+
+## Inventario progresivo y reportes aprendidos
+
+Desde el sector 2, las tarimas se mezclan en dos grupos con cajas azules de Corona y rojas de Victoria. Los grupos crecen hasta cuatro tarimas cada uno, con cuatro objetivos y cuatro distractores en total; la distancia de interacción se reduce progresivamente hasta 36 unidades. Se registra la tarima más cercana: las otras marcas no suman al inventario. El recorrido tiene 8000 unidades para conservar espacio entre grupos, observaciones, cruces y escaleras. Los resultados cuentan las tarimas objetivo reales de todos los sectores iniciados.
+
+Tras identificar correctamente un tipo de acto o riesgo, las siguientes apariciones del mismo tipo se reportan con E sin repetir el cuestionario. Cada objeto nuevo sigue requiriendo un reporte y puede penalizarse si se omite; un objeto ya reportado nunca suma dos veces. Reiniciar la partida borra este aprendizaje.

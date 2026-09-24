@@ -2109,8 +2109,8 @@ body:has(#overlay.ready) {
   .inventory-result { font-size: 11px; }
 }
 
-/* Fit the equipment and final results dialogs to the mobile viewport. */
-@media (max-width: 1100px), (max-height: 600px) {
+/* Fit equipment and results to the viewport on every device. */
+@media all {
   #overlay:has(.equipment, .end-body):not(.hidden) {
     position: fixed;
     inset: 0;
@@ -2218,4 +2218,53 @@ body:has(#overlay.ready) {
   .setup .product-guide { gap: 6px; }
   .setup .product-guide img { width: 24px; height: 18px; }
   .setup .product-guide figcaption, .setup .product-guide > strong { font-size: 10px; }
+}
+
+/* Size the game title to its available space, including narrow phones. */
+.hero { display: grid; }
+.hero > div { min-width: 0; width: 100%; container-type: inline-size; }
+.hero h1.game-name {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  font-size: clamp(32px, 10vw, 86px);
+  line-height: 1.08;
+  letter-spacing: 0.025em;
+  margin-bottom: 10px;
+}
+@supports (font-size: 1cqi) {
+  .hero h1.game-name { font-size: clamp(32px, 12cqi, 86px); }
+}
+@media (max-width: 480px) {
+  .hero { padding-block: 16px; }
+  .hero .game-tagline { font-size: 17px; padding-left: 9px; margin-bottom: 10px; }
+}
+
+/* Use wider columns and readable type when the viewport has room. */
+@media (min-width: 900px) and (min-height: 650px) {
+  #modal:has(.equipment, .end-body) { width: 1000px; padding: 24px; }
+  #modal:has(.equipment, .end-body) h2 { font-size: 32px; margin-bottom: 10px; }
+  #modal:has(.equipment, .end-body) p { font-size: 15px; line-height: 1.45; }
+  #modal:has(.equipment, .end-body) .eyebrow { font-size: 11px; }
+  #modal:has(.equipment, .end-body) :is(.primary, .secondary) { font-size: 15px; min-height: 48px; }
+  #modal:has(.equipment) { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px 24px; align-items: center; }
+  #modal .epp-heading { grid-column: 1; grid-row: 1; }
+  #modal .equipment { grid-column: 2; grid-row: 1; margin: 0; gap: 10px; }
+  #modal .equipment button { min-height: 96px; font-size: 13px; padding: 10px 6px; }
+  #modal .equipment button span { font-size: 30px; }
+  #modal #enter { grid-column: 2; grid-row: 2; }
+  #modal:has(.equipment) .tiny { grid-column: 1; grid-row: 2; font-size: 13px; }
+  #modal .end-intro { display: block; }
+  #modal .end-body { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+  #modal .result { font-size: 13px; gap: 6px 12px; }
+  #modal .end-inventory h3 { font-size: 20px; }
+  #modal .inventory-result { font-size: 14px; }
+  #modal .inventory-result :is(th, td) { padding: 8px 4px; }
+  #modal .result-box { width: 32px; height: 23px; }
+  #modal .score-result { padding: 14px; }
+  #modal .score-result > strong { font-size: 32px; }
+  #modal .score-breakdown { font-size: 13px; gap: 8px; }
+  #modal:has(.end-body) .score-result p { font-size: 12px; }
+  #modal .end-actions { margin-top: 16px; gap: 12px; }
 }
