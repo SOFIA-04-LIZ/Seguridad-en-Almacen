@@ -2240,6 +2240,18 @@ body:has(#overlay.ready) {
   .hero { padding-block: 16px; }
   .hero .game-tagline { font-size: 17px; padding-left: 9px; margin-bottom: 10px; }
 }
+@media (max-width: 700px), (max-width: 1000px) and (max-height: 500px) {
+  .hero h1.game-name {
+    font-size: clamp(32px, 7.5vw, 42px);
+    line-height: 1.08;
+    letter-spacing: 0;
+    margin-bottom: 12px;
+  }
+  .hero .game-tagline {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+}
 
 /* Use wider columns and readable type when the viewport has room. */
 @media (min-width: 900px) and (min-height: 650px) {
