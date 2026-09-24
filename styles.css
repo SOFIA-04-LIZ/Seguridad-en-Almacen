@@ -2063,3 +2063,159 @@ body:has(#overlay.ready) {
 .inventory-result { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
 .inventory-result th, .inventory-result td { padding: 8px 4px; text-align: left; border-bottom: 1px solid #55513b; }
 .inventory-difference { color: #ffe079; }
+
+.hero h1.game-name {
+  margin: 0 0 12px;
+  color: #ffc600;
+  font-size: clamp(56px, 10vw, 112px);
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  line-height: 0.95;
+  white-space: nowrap;
+}
+.hero .game-tagline {
+  margin: 0 0 16px;
+  padding-left: 12px;
+  border-left: 3px solid #ffc600;
+  font-size: clamp(18px, 2.8vw, 28px);
+  font-weight: 500;
+  line-height: 1.35;
+  color: #f4f4ed;
+}
+.hero .game-tagline em {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.result-box {
+  width: 36px;
+  height: 26px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.score-result {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #ffc60066;
+  border-radius: 8px;
+  background: #ffc60008;
+}
+.score-result > strong { color: #ffc600; font-size: 28px; }
+.score-breakdown { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font-size: 13px; }
+#modal .score-result p { font-size: 12px; line-height: 1.5; margin: 12px 0 0; }
+@media (max-width: 480px) {
+  .result-box { display: block; margin: 0 0 4px; }
+  .inventory-result { font-size: 11px; }
+}
+
+/* Fit the equipment and final results dialogs to the mobile viewport. */
+@media (max-width: 1100px), (max-height: 600px) {
+  #overlay:has(.equipment, .end-body):not(.hidden) {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+  body:has(#overlay:not(.hidden) :is(.equipment, .end-body)) { overflow: hidden; }
+  .stage:has(.equipment, .end-body) { isolation: auto; }
+  #modal:has(.equipment, .end-body) {
+    width: 620px;
+    max-height: 100%;
+    padding: 12px;
+  }
+  #modal:has(.equipment, .end-body) h2 { font-size: 24px; margin: 0 0 6px; }
+  #modal:has(.equipment, .end-body) p { font-size: 12px; line-height: 1.35; margin: 6px 0; }
+  #modal:has(.equipment, .end-body) .eyebrow { font-size: 10px; margin: 0 0 4px; }
+  #modal:has(.equipment, .end-body) :is(.primary, .secondary) { min-height: 44px; padding: 8px; font-size: 12px; }
+  #modal .equipment { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 10px 0; }
+  #modal .equipment button { min-height: 74px; font-size: 11px; line-height: 1.2; padding: 6px 3px; }
+  #modal .equipment button span { font-size: 24px; margin: 0 0 4px; }
+  #modal:has(.equipment) .feedback:empty { display: none; }
+  #modal:has(.equipment) .tiny { font-size: 11px; }
+  #modal .end-intro { display: none; }
+  #modal .result { font-size: 11px; gap: 4px 10px; padding: 6px 0; margin: 6px 0; }
+  #modal .end-inventory h3 { font-size: 16px; margin: 8px 0 4px; }
+  #modal .inventory-scope { font-size: 10px; }
+  #modal .inventory-result { margin: 6px 0; font-size: 11px; }
+  #modal .inventory-result :is(th, td) { padding: 5px 3px; }
+  #modal .result-box { display: inline-block; width: 26px; height: 19px; margin: 0 4px 0 0; }
+  #modal .inventory-difference { font-size: 11px; }
+  #modal .score-result { margin: 8px 0; padding: 8px; }
+  #modal .score-result > strong { font-size: 24px; }
+  #modal .score-breakdown { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 6px; font-size: 11px; }
+  #modal .score-result p { font-size: 10px; margin: 6px 0 0; }
+  .end-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+@media (max-height: 500px) and (min-width: 480px) {
+  #modal:has(.equipment, .end-body) { width: 900px; padding: 8px 12px; }
+  #modal:has(.equipment) { display: grid; grid-template-columns: 1fr 1.2fr; column-gap: 14px; align-items: center; }
+  #modal .epp-heading { grid-column: 1; grid-row: 1; }
+  #modal .equipment { grid-column: 2; grid-row: 1; margin: 0; }
+  #modal .equipment button { min-height: 64px; }
+  #modal #enter { grid-column: 2; grid-row: 2; }
+  #modal:has(.equipment) .tiny { grid-column: 1; grid-row: 2; }
+  #modal .end-body { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; align-items: start; }
+  #modal:has(.end-body) h2 { font-size: 21px; margin-bottom: 2px; }
+  #modal .end-inventory h3 { margin: 3px 0; }
+  #modal .inventory-result :is(th, td) { padding: 3px 2px; }
+  #modal .result { margin-top: 0; padding: 3px 0; }
+  #modal .end-actions { margin-top: 6px; }
+}
+@media (max-height: 600px) {
+  #modal:has(.end-body) { padding: 8px; }
+  #modal:has(.end-body) h2 { font-size: 20px; margin-bottom: 2px; }
+  #modal:has(.end-body) .eyebrow { margin-bottom: 2px; font-size: 9px; }
+  #modal .end-inventory h3 { font-size: 14px; margin: 4px 0 2px; }
+  #modal .inventory-scope { margin: 2px 0; font-size: 10px; line-height: 1.2; }
+  #modal .inventory-result { margin: 3px 0; }
+  #modal .inventory-result :is(th, td) { padding: 3px 2px; }
+  #modal .inventory-difference { margin: 3px 0; line-height: 1.2; }
+  #modal .score-result { margin: 4px 0; padding: 6px; }
+  #modal .score-result > strong { font-size: 21px; }
+  #modal .score-result p { line-height: 1.2; margin-top: 4px; }
+  #modal .result { margin: 3px 0; padding: 3px 0; gap: 2px 8px; }
+  #modal .score-breakdown { gap: 2px 6px; margin-top: 4px; }
+}
+@media (max-height: 500px) and (min-width: 480px) {
+  #modal .end-body { grid-template-columns: 1.5fr 1fr; gap: 10px; }
+  #modal:has(.end-body) .inventory-scope,
+  #modal:has(.end-body) .inventory-difference {
+    font-size: 10px;
+    line-height: 1.2;
+    margin: 3px 0;
+  }
+  #modal:has(.end-body) .score-result p { font-size: 10px; line-height: 1.2; }
+  #modal .inventory-result { font-size: 10px; }
+  #modal .result-box { width: 22px; height: 16px; }
+}
+
+/* Compact briefing and an explicit, accessible handrail choice. */
+.setup { padding: clamp(16px, 2.5vw, 26px); }
+.setup .eyebrow { margin-bottom: 6px; }
+.setup h2 { margin-bottom: 8px; }
+.setup .product-guide { margin: 12px 0; padding: 8px 12px; }
+.setup .instructions > div { padding: 10px 12px; }
+.setup .how-to-play { padding: 12px; margin-top: 12px; }
+.setup .how-to-play p { margin: 6px 0 0; }
+
+.setup .product-guide {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 10px 0;
+  padding: 6px 0;
+  border: 0;
+  border-block: 1px solid #ffffff18;
+  border-radius: 0;
+  background: transparent;
+}
+.setup .product-guide > strong { flex: none; font-size: 11px; color: #b6b6af; }
+.setup .product-guide figure { display: flex; align-items: center; gap: 5px; flex: none; max-width: none; }
+.setup .product-guide img { width: 30px; height: 22px; margin: 0; object-fit: contain; }
+.setup .product-guide figcaption { margin: 0; font-size: 11px; font-weight: 500; }
+@media (max-width: 380px) {
+  .setup .product-guide { gap: 6px; }
+  .setup .product-guide img { width: 24px; height: 18px; }
+  .setup .product-guide figcaption, .setup .product-guide > strong { font-size: 10px; }
+}

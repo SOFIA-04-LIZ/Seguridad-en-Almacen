@@ -70,7 +70,7 @@ vm.runInContext(
 );
 const code = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8').replace(
   /reset\(\);\s*requestAnimationFrame\(frame\);/,
-  `reset();globalThis.test={finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
+  `reset();globalThis.test={toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
  get sector(){return sector},get totalFish(){return totalFish},get totalCoins(){return totalCoins},get fishFound(){return fishFound},get streak(){return streak},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
  get player(){return player},get state(){return state},get lives(){return lives},get worn(){return worn},get epp(){return epp},get incident(){return incident},get triggered(){return triggered},get found(){return found},
  start(ids=['helmet','vest','boots']){worn=new Set(ids);state='playing';hud()},
@@ -325,6 +325,7 @@ while (t.sector === 1 && frames++ < 5000) {
   const p = t.player,
     c = t.crossings.find((c) => !c.cleared && p.x + 32 > c.x - 95 && p.x + 32 <= c.x);
   t.keys.right = !c;
+  if (t.nearbyHandrail() && !t.railHeld) t.toggleHandrail();
   step();
   const h = t.hazards.find((h) => !h.reported && Math.abs(p.x + 16 - h.x) < 65);
   if (h) {
@@ -409,6 +410,7 @@ while (t.sector < 6 && limit++ < 15000) {
       (c) => !c.cleared && p.x + 32 > c.x - t.stopWidth() + 15 && p.x + 32 <= c.x,
     );
   t.keys.right = !c;
+  if (t.nearbyHandrail() && !t.railHeld) t.toggleHandrail();
   const before = t.completedStairs,
     sectorBefore = t.sector;
   step();
@@ -483,6 +485,7 @@ assert.equal(t.state, 'playing');
 assert.equal(t.totalActs, 1);
 const stairWorker = t.workers.find((w) => w.id === 'noHandrail');
 t.place(stairWorker.x - 16, stairWorker.feet - 66);
+t.interact(); // First interaction takes the handrail.
 t.interact();
 assert.equal(t.state, 'inspection');
 const frozenX = stairWorker.x;
@@ -594,7 +597,7 @@ assert.match(t.inventorySummary(), /diferencia de inventario de 2 tarimas/);
 t.place(2500);
 t.interact();
 assert.match(t.inventorySummary(), /Stella Artois<\/th><td>1 de 1<\/td><td>0/);
-assert.match(t.inventorySummary(), /diferencia de inventario de 1 tarima por/);
+assert.match(t.inventorySummary(), /diferencia de inventario de 1 tarima sin/);
 t.place(1230);
 t.interact();
 assert.match(t.inventorySummary(), /No hay diferencia de inventario/);
@@ -606,3 +609,92 @@ assert.match($('#modal').innerHTML, /diferencia de inventario de 2 tarimas/);
 t.reset();
 assert.match(t.inventorySummary(), /Stella Artois<\/th><td>0 de 1<\/td><td>1/);
 console.log('PASS: final inventory counts, missing pallets, complete inventory, cumulative sectors and reset.');
+
+// Scoring rewards unique progress and registered inventory; new games reset it.
+assert.equal(t.scoreSummary().total, 0);
+t.start();
+t.place(310);
+t.update(0);
+assert.equal(t.scoreSummary().distance, 200);
+assert.equal(t.scoreSummary().travel, 2);
+t.place(210);
+t.update(0);
+assert.equal(t.scoreSummary().distance, 200);
+t.advanceSector();
+t.place(130);
+t.update(0);
+assert.equal(t.scoreSummary().distance, 300);
+t.place(2500);
+t.interact();
+t.interact();
+assert.equal(t.scoreSummary().inventory, 100);
+assert.equal(t.scoreSummary().total, 103);
+t.finish();
+assert.doesNotMatch($('#modal').innerHTML, /<span>Stella:|<span>Flying Fish:/);
+assert.match($('#modal').innerHTML, /result-box/);
+assert.match($('#modal').innerHTML, /103 puntos/);
+t.reset();
+assert.equal(t.scoreSummary().total, 0);
+assert.equal(t.scoreSummary().distance, 0);
+console.log('PASS: score breakdown, unique distance, sector accumulation, duplicate inventory prevention and reset.');
+
+// Interact takes the handrail; ignoring it costs one life per staircase.
+t.reset();
+t.start();
+t.hazards.forEach(h => h.reported = true);
+t.workers.forEach(w => w.reported = true);
+const railStair = t.stairs[0];
+t.place(railStair.x - 17);
+t.keys.right = true;
+step();
+assert.equal(t.state, 'lesson');
+assert.equal(t.lives, 2);
+assert.equal(t.railHeld, false);
+assert.match($('#modal').innerHTML, /apoyo y equilibrio/);
+step(30);
+assert.equal(t.lives, 2, 'No repeated penalty while explanation is open');
+$('#after-handrail').onclick();
+t.interact();
+assert.equal(t.railHeld, true, 'Existing interaction chooses the handrail');
+t.update(3);
+t.keys.right = true;
+step(10);
+assert(t.player.x > railStair.x);
+t.interact();
+assert.equal(t.railHeld, false);
+step(10);
+assert.equal(t.lives, 2, 'Same staircase is not penalized repeatedly');
+t.place(railStair.x + t.stairWidth(railStair) + 60);
+step();
+assert.equal(t.railHeld, false);
+// A new staircase can cause a new mistake; the last life opens results.
+for (const remaining of [1, 0]) {
+  t.advanceSector();
+  t.hazards.forEach(h => h.reported = true);
+  t.workers.forEach(w => w.reported = true);
+  t.place(t.stairs[0].x - 17);
+  t.keys.right = true;
+  step();
+  assert.equal(t.state, 'lesson');
+  assert.equal(t.lives, remaining);
+  $('#after-handrail').onclick();
+  if (remaining) t.update(3);
+}
+assert.equal(t.state, 'lost');
+t.reset();
+t.start();
+t.hazards.forEach(h => h.reported = true);
+t.workers.forEach(w => w.reported = true);
+t.place(t.stairs[0].x - 70);
+t.interact();
+assert(t.railHeld);
+t.keys.right = true;
+step(20);
+assert.equal(t.lives, 3, 'Gripping before entry prevents the penalty');
+assert.equal(t.state, 'playing');
+t.interact();
+step();
+assert.equal(t.lives, 2, 'Releasing while climbing is also unsafe');
+t.reset();
+assert.equal(t.railHeld, false);
+console.log('PASS: shared interaction, safe grip, missed/released handrail penalty, no duplicate penalty, new sectors and final-life results.');

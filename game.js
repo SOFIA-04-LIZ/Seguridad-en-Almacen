@@ -38,7 +38,10 @@
     noJumpZones = [],
     focusTokens = [],
     coins = [];
+  let railHeld = false;
   let sector = 1,
+    completedDistance = 0,
+    sectorProgress = 0,
     totalReports = 0,
     totalPallets = 0,
     totalFish = 0,
@@ -303,6 +306,9 @@
     return FLOOR - n * s.rise;
   }
   function advanceSector() {
+    railHeld = false;
+    completedDistance += sectorProgress;
+    sectorProgress = 0;
     sector++;
     found = false;
     fishFound = false;
@@ -383,7 +389,9 @@
     $('#streak').textContent = streak;
   }
   function reset() {
+    railHeld = false;
     sector = 1;
+    completedDistance = sectorProgress = 0;
     totalReports =
       totalPallets =
       totalFish =
@@ -443,7 +451,7 @@
       .querySelector('.game-shell')
       .scrollIntoView({ block: 'start', behavior: 'instant' });
     $('#modal').innerHTML =
-      '<p class="eyebrow">ANTES DE ENTRAR / 01</p><h2>La seguridad empieza contigo.</h2><p>Elige cómo entrar al almacén. <b>Jugarás con lo que selecciones</b>, aunque sea incorrecto. Las decisiones inseguras activan incidentes, restan una vida y explican qué debes corregir.</p><div class="equipment"></div><p class="feedback" role="status"></p><button class="primary" id="enter">Comenzar recorrido con mi elección →</button><p class="tiny">El personaje avanza solo. Frena con ← para observar y detenerte en los cruces; acelera con →. Salta con espacio e inspecciona con E.</p>';
+      '<div class="epp-heading"><p class="eyebrow">ANTES DE ENTRAR / 01</p><h2>La seguridad empieza contigo.</h2><p>Elige cómo entrar al almacén. <b>Jugarás con lo que selecciones</b>, aunque sea incorrecto. Las decisiones inseguras activan incidentes, restan una vida y explican qué debes corregir.</p></div><div class="equipment"></div><p class="feedback" role="status"></p><button class="primary" id="enter">Comenzar recorrido con mi elección →</button><p class="tiny">El personaje avanza solo. Frena con ← para observar y detenerte en los cruces; acelera con →. Salta con espacio e inspecciona con E.</p>';
     const selected = new Set();
     equipment.forEach(([id, icon, name]) => {
       const b = document.createElement('button');
@@ -637,11 +645,25 @@
       return { ...item, expected, missing: Math.max(0, expected - item.detected) };
     });
     const missing = rows.reduce((sum, item) => sum + item.missing, 0);
-    return '<h3>Inventario de tarimas</h3><p>Incluye todas las tarimas de los sectores iniciados, también las que no alcanzaste a recorrer.</p>' +
+    return '<h3>Inventario de tarimas</h3><p class="inventory-scope">Todos los sectores iniciados, incluso las tarimas que no alcanzaste a recorrer.</p>' +
       '<table class="inventory-result"><thead><tr><th scope="col">Presentación</th><th scope="col">Detectadas</th><th scope="col">Faltantes</th></tr></thead><tbody>' +
-      rows.map((item) => '<tr><th scope="row">' + item.name + '</th><td>' + item.detected + ' de ' + item.expected + '</td><td>' + item.missing + '</td></tr>').join('') +
-      '</tbody></table><p class="inventory-difference">' +
-      (missing > 0 ? 'También tenemos una diferencia de inventario de ' + missing + (missing === 1 ? ' tarima' : ' tarimas') + ' por no detectar y registrar todas las tarimas.' : '¡Detectaste todas las tarimas! No hay diferencia de inventario.') + '</p>';
+      rows.map((item) => '<tr><th scope="row"><img class="result-box" src="assets/' + (item.brand === 'STELLA' ? 'stella' : 'flying-fish') + '-box.svg" alt="" />' + item.name + '</th><td>' + item.detected + ' de ' + item.expected + '</td><td>' + item.missing + '</td></tr>').join('') +
+      '</tbody></table><p class="inventory-difference"><span aria-hidden="true">' + (missing > 0 ? '⚠' : '✓') + '</span> ' +
+      (missing > 0 ? 'Tenemos una diferencia de inventario de ' + missing + (missing === 1 ? ' tarima' : ' tarimas') + ' sin detectar y registrar.' : '¡Detectaste todas las tarimas! No hay diferencia de inventario.') + '</p>';
+  }
+  function scoreSummary() {
+    const distance = Math.floor(completedDistance + sectorProgress);
+    const inventory = (totalPallets + totalFish) * 100;
+    const travel = Math.floor(distance / 100);
+    const risks = totalReports * 150;
+    const acts = totalActs * 150;
+    return { distance, inventory, travel, risks, acts, total: inventory + travel + risks + acts };
+  }
+  function scoreMarkup() {
+    const score = scoreSummary();
+    return '<section class="score-result" aria-label="Puntuación final"><span aria-hidden="true">🏆</span> <strong>' + score.total + ' puntos</strong>' +
+      '<div class="score-breakdown"><span>📦 Inventario: ' + score.inventory + ' pts</span><span>↗ Recorrido: ' + score.travel + ' pts</span><span>⚠ Riesgos: ' + score.risks + ' pts</span><span>👷 Actos: ' + score.acts + ' pts</span></div>' +
+      '<p>Distancia recorrida: ' + score.distance + ' unidades. Tarima: +100; riesgo o acto correcto: +150; cada 100 unidades nuevas: +1.</p></section>';
   }
   function finish() {
     state = 'lost';
@@ -649,12 +671,8 @@
     $('#pause').disabled = true;
     $('#overlay').classList.remove('hidden');
     $('#modal').innerHTML =
-      '<p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p>Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p><div class="result"><span>Sector: ' +
+      '<div class="end-heading"><p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p class="end-intro">Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p></div><div class="end-body"><div class="end-inventory"><div class="result"><span>Sector: ' +
       sector +
-      '</span><span>Stella: ' +
-      totalPallets +
-      '</span><span>Flying Fish: ' +
-      totalFish +
       '</span><span>Monedas: ' +
       totalCoins +
       '</span><span>Reportes: ' +
@@ -663,7 +681,7 @@
       totalActs +
       '</span><span>Escaleras: ' +
       completedStairs +
-      '</span></div>' + inventorySummary() + '<button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button>';
+      '</span></div>' + inventorySummary() + '</div>' + scoreMarkup() + '</div><div class="end-actions"><button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button></div>';
     $('#again').onclick = () => {
       const gear = new Set(worn);
       reset();
@@ -687,6 +705,10 @@
   }
   function interact() {
     if (state !== 'playing') return;
+    if (player.ground && nearbyHandrail() && !railHeld) {
+      toggleHandrail();
+      return;
+    }
     const h = [...hazards, ...workers]
       .filter(
         (h) =>
@@ -698,6 +720,10 @@
       .sort((a, b) => Math.abs(player.x + 16 - a.x) - Math.abs(player.x + 16 - b.x))[0];
     if (h) {
       inspectHazard(h);
+      return;
+    }
+    if (player.ground && nearbyHandrail()) {
+      toggleHandrail();
       return;
     }
     const p = pallets.find(
@@ -727,6 +753,34 @@
     streak++;
     hud();
     toast('¡Tarima ' + p.brand + ' registrada! Racha ' + streak, 3);
+  }
+  function missHandrail(stair) {
+    stair.handrailMissed = true;
+    lives--;
+    streak = 0;
+    state = 'lesson';
+    clearKeys();
+    player.vx = 0;
+    $('#pause').disabled = true;
+    hud();
+    $('#overlay').classList.remove('hidden');
+    $('#modal').innerHTML = '<p class="eyebrow">DECISIÓN INSEGURA · −1 VIDA</p><h2>No te sujetaste del pasamanos.</h2><p>Al subir o bajar, el pasamanos te da apoyo y equilibrio. Si tropiezas o resbalas, sujetarte ayuda a evitar una caída por las escaleras.</p><p>Es obligatorio sujetarse durante todo el trayecto. Cerca de la escalera, usa <b>E o Interactuar</b> para sujetarte; úsalo de nuevo para soltar.</p><button class="primary" id="after-handrail">' + (lives ? 'Entendido, continuar →' : 'Ver resultado →') + '</button>';
+    $('#after-handrail').onclick = () => {
+      if (!lives) { finish(); return; }
+      state = 'playing';
+      startDelay = 2.5;
+      $('#overlay').classList.add('hidden');
+      $('#pause').disabled = false;
+    };
+  }
+  function nearbyHandrail() {
+    const center = player.x + player.w / 2;
+    return stairs.find((s) => center >= s.x - 100 && center <= s.x + stairWidth(s));
+  }
+  function toggleHandrail() {
+    if (state !== 'playing' || !player.ground || !nearbyHandrail()) return;
+    railHeld = !railHeld;
+    toast(railHeld ? "Sujeto al pasamanos." : "Soltaste el pasamanos.", 1.5);
   }
   $('#pause').onclick = pause;
   $('#restart').onclick = () => {
@@ -940,11 +994,19 @@
         }
       }
     }
-    const nextStair = stairAt(player.x + player.w / 2);
+    let nextStair = stairAt(player.x + player.w / 2);
+    const activeRail = onStairs || nextStair;
+    if (wasGround && activeRail && !railHeld && !activeRail.handrailMissed && player.x !== oldX) {
+      player.x = oldX;
+      missHandrail(activeRail);
+      return;
+    }
+    if (!onStairs && !nextStair && !nearbyHandrail()) railHeld = false;
     if (!wasGround && nextStair) {
       player.x = oldX;
       player.vx = 0;
     }
+    sectorProgress = Math.max(sectorProgress, player.x - (sector === 1 ? 110 : 30));
     const surface = floorAt(player.x + player.w / 2);
     if (wasGround && (onStairs || nextStair)) {
       player.y = surface - player.h;
@@ -1183,7 +1245,7 @@
     }
     rect(-21, -44, 6, 22, '#323232');
     rect(-21, -24, 6, 7, '#b7845c');
-    if (stairAt(player.x + 16) && player.ground) {
+    if (railHeld && stairAt(player.x + 16) && player.ground) {
       line(15, -43, 25, -53, '#323232', 6);
       rect(22, -56, 7, 6, '#b7845c');
     } else {
@@ -1374,7 +1436,33 @@
       text('✓ REPORTADO', worker.x, worker.feet - 92, 10, '#b7ea91', 'center');
     }
   }
+  function drawHandrailSign(x) {
+    const y = FLOOR - 166;
+    rect(x - 3, y + 77, 6, 89, '#8b9398');
+    rect(x - 40, y, 80, 83, '#f4f4ed');
+    ctx.fillStyle = '#1768bc';
+    ctx.beginPath();
+    ctx.arc(x, y + 31, 27, 0, Math.PI * 2);
+    ctx.fill();
+    // White pictogram: person on steps, with a hand meeting the sloping rail.
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x - 9, y + 16, 5, 0, Math.PI * 2);
+    ctx.fill();
+    line(x - 9, y + 24, x - 9, y + 36, '#fff', 5);
+    line(x - 9, y + 26, x + 2, y + 30, '#fff', 4);
+    line(x + 2, y + 30, x + 10, y + 23, '#fff', 4);
+    line(x - 9, y + 36, x - 16, y + 47, '#fff', 4);
+    line(x - 9, y + 36, x + 1, y + 42, '#fff', 4);
+    line(x - 1, y + 32, x + 21, y + 14, '#fff', 3);
+    line(x - 21, y + 51, x - 6, y + 51, '#fff', 2);
+    line(x - 6, y + 51, x - 6, y + 45, '#fff', 2);
+    line(x - 6, y + 45, x + 8, y + 45, '#fff', 2);
+    text('OBLIGATORIO', x, y + 67, 9, '#123454', 'center');
+    text('USAR PASAMANOS', x, y + 78, 8, '#123454', 'center');
+  }
   function drawStairs(s) {
+    drawHandrailSign(s.x - 82);
     const run = s.steps * s.tread,
       top = FLOOR - s.steps * s.rise,
       end = s.x + stairWidth(s);

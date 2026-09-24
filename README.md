@@ -21,6 +21,7 @@ Se verificaron en Chrome nueve tamaños: 320×568, 360×640, 390×844, 430×932,
 - El personaje avanza automáticamente. Flecha izquierda o A: frenar para observar y detenerse en cruces. Flecha derecha o D: acelerar. Recorre los peldaños de las escaleras al avanzar.
 - Espacio, flecha arriba o W: saltar en los espacios libres. No se permite saltar sobre tarimas ni saltarse las escaleras.
 - E: interactuar.
+- E o Interactuar cerca de una escalera: sujetarse o soltar el pasamanos. Un cartel con pictograma indica su uso obligatorio. Avanzar sin sujetarse resta una vida y explica el riesgo de caída, una sola vez por escalera. Al salir se suelta y debe elegir de nuevo en la siguiente.
 - P o Escape: pausar.
 - ↻: reiniciar toda la partida.
 
@@ -72,7 +73,7 @@ Cada sector incorpora cinco personas animadas:
 
 El jugador puede acercarse e interactuar con E para identificar la conducta entre tres opciones. La interacción toma en cuenta la posición y la altura de la persona. Las escenas se detienen mientras se responde. Una respuesta incorrecta permite reintentar sin perder vidas; la correcta suma una sola vez al contador ACTOS y confirma el reporte sin interrumpir el recorrido.
 
-Los actos se contabilizan por separado de las condiciones del entorno. Cada sector genera personas nuevas para observar y conserva los totales de la partida. Antes de reportar no hay marcadores ni avisos encima de las personas. El personaje del jugador extiende una mano hacia el pasamanos al recorrer las escaleras.
+Los actos se contabilizan por separado de las condiciones del entorno. Cada sector genera personas nuevas para observar y conserva los totales de la partida. Antes de reportar no hay marcadores ni avisos encima de las personas. El personaje del jugador extiende una mano hacia el pasamanos solo cuando el jugador decide sujetarse con E o el botón «Interactuar».
 
 ## Ubicaciones variables
 

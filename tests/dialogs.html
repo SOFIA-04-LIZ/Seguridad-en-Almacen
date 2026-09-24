@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Mobile dialog fit checks</title>
+<pre id="results">RUNNING</pre>
+<iframe id="app" style="border:0"></iframe>
+<script>
+(async () => {
+  const output = document.querySelector('#results');
+  try {
+    const [html, game] = await Promise.all([
+      fetch('../index.html').then(r => r.text()),
+      fetch('../game.js').then(r => r.text())
+    ]);
+    const code = game.replace(/reset\(\);\s*requestAnimationFrame\(frame\);/,
+      `reset();window.dialogTest={showEquipment,finish,largeResult(){sector=99;totalPallets=98;totalFish=97;totalReports=490;totalActs=480;completedDistance=650000;finish()}};`);
+    const frame = document.querySelector('#app');
+    const ready = new Promise(resolve => frame.onload = resolve);
+    frame.srcdoc = html.replace('<head>', '<head><base href="' + new URL('../', location.href) + '">')
+      .replace(/<script src="game.js[^>]*><\/script>/, '')
+      .replace('</body>', () => '<script>window.addEventListener("load",()=>{' + code + '});<\/script></body>');
+    await ready;
+    const sizes = [[320,480],[320,568],[360,640],[390,844],[430,932],[568,320],[667,375],[844,390],[932,430],[768,1024],[980,1200]];
+    const lines = [];
+    for (const [width,height] of sizes) {
+      frame.style.width = width+'px'; frame.style.height = height+'px';
+      for (const state of ['showEquipment','finish','largeResult']) {
+        frame.contentWindow.dialogTest[state]();
+        await new Promise(r => setTimeout(r, 100));
+        const doc = frame.contentDocument;
+        const modal = doc.querySelector('#modal');
+        const box = modal.getBoundingClientRect();
+        const errors = [];
+        if (box.top < 0 || box.bottom > height || box.left < 0 || box.right > width) errors.push('outside viewport '+JSON.stringify(box.toJSON()));
+        if (modal.scrollHeight > modal.clientHeight+1 || modal.scrollWidth > modal.clientWidth+1) errors.push('scroll '+modal.scrollHeight+'/'+modal.clientHeight);
+        for (const button of modal.querySelectorAll('button')) {
+          const b = button.getBoundingClientRect();
+          if(b.bottom > height || b.top < 0 || b.height < 44) errors.push('button '+button.textContent);
+        }
+        if (errors.length) errors.push([...modal.children].map(el=>el.className+':'+Math.round(el.getBoundingClientRect().height)).join(';') + ' body:' + [...modal.querySelectorAll('.end-body > *, .end-inventory > *')].map(el=>el.className+':'+Math.round(el.getBoundingClientRect().height)).join(';'));
+        lines.push(width+'x'+height+' '+state+' '+(errors.length ? 'FAIL '+errors.join(', ') : 'PASS'));
+      }
+    }
+    output.textContent=lines.join('\n')+'\n'+(lines.some(l=>l.includes('FAIL'))?'FAILED':'ALL PASS');
+  } catch(e) { output.textContent='FAIL '+e.stack; }
+})();
+</script>
