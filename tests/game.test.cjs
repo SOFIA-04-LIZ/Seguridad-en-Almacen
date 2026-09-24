@@ -754,3 +754,30 @@ for (let level = 1; level <= 12; level++) {
   if (level < 12) t.advanceSector();
 }
 console.log('PASS: learned report types, reset, 12 sectors of mixed inventory, distractors, nearest selection, safe placement and actual cumulative totals.');
+
+// Incorrect inventory subtracts points on each attempt and survives sector changes.
+t.reset(); t.start(); t.advanceSector();
+t.hazards.forEach(h => h.reported = true);
+t.workers.forEach(w => w.reported = true);
+const incorrect = t.pallets.find(p => p.brand === 'CORONA');
+t.place(incorrect.x + 37);
+t.interact();
+assert.equal(t.scoreSummary().penalty, 50);
+assert.equal(t.scoreSummary().total, -50);
+assert.equal(t.totalPallets + t.totalFish, 0);
+assert.equal(t.lives, 3);
+assert.match($('#toast').textContent, /−50 puntos/);
+t.interact();
+assert.equal(t.scoreSummary().penalty, 100);
+const correct = t.pallets.find(p => p.brand === 'STELLA');
+t.place(correct.x + 37);
+t.interact();
+assert.equal(t.scoreSummary().total, 0);
+t.advanceSector();
+assert.equal(t.scoreSummary().penalty, 100);
+t.finish();
+assert.match($('#modal').innerHTML, /Tarimas incorrectas: 2 · −100 pts/);
+t.reset();
+assert.equal(t.scoreSummary().penalty, 0);
+assert.equal(t.scoreSummary().total, 0);
+console.log('PASS: wrong inventory penalties, repeat attempts, correct inventory, sector persistence, results and reset.');

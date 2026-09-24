@@ -47,6 +47,7 @@
     totalReports = 0,
     totalPallets = 0,
     totalFish = 0,
+    incorrectPallets = 0,
     totalCoins = 0,
     coinsTowardLife = 0,
     completedStairs = 0,
@@ -415,6 +416,7 @@
     totalReports =
       totalPallets =
       totalFish =
+      incorrectPallets =
       totalCoins =
       coinsTowardLife =
       completedStairs =
@@ -687,13 +689,14 @@
     const travel = Math.floor(distance / 100);
     const risks = totalReports * 150;
     const acts = totalActs * 150;
-    return { distance, inventory, travel, risks, acts, total: inventory + travel + risks + acts };
+    const penalty = incorrectPallets * 50;
+    return { distance, inventory, travel, risks, acts, penalty, total: inventory + travel + risks + acts - penalty };
   }
   function scoreMarkup() {
     const score = scoreSummary();
     return '<section class="score-result" aria-label="Puntuación final"><span aria-hidden="true">🏆</span> <strong>' + score.total + ' puntos</strong>' +
       '<div class="score-breakdown"><span>📦 Inventario: ' + score.inventory + ' pts</span><span>↗ Recorrido: ' + score.travel + ' pts</span><span>⚠ Riesgos: ' + score.risks + ' pts</span><span>👷 Actos: ' + score.acts + ' pts</span></div>' +
-      '<p>Distancia recorrida: ' + score.distance + ' unidades. Tarima: +100; riesgo o acto correcto: +150; cada 100 unidades nuevas: +1.</p></section>';
+      '<p>Tarimas incorrectas: ' + incorrectPallets + ' · −' + score.penalty + ' pts. Distancia recorrida: ' + score.distance + ' unidades. Tarima: +100; riesgo o acto correcto: +150; cada 100 unidades nuevas: +1.</p></section>';
   }
   function finish() {
     state = 'lost';
@@ -764,7 +767,8 @@
       return;
     }
     if (!['STELLA', 'FLYING FISH'].includes(p.brand)) {
-      toast('Esta tarima es de ' + p.brand + '. Busca Stella o Flying Fish.', 2);
+      incorrectPallets++;
+      toast('−50 puntos: esta tarima es de ' + p.brand + '. Busca Stella o Flying Fish.', 3);
       return;
     }
     if (p.registered) {
