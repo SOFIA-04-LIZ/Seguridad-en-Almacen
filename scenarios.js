@@ -48,6 +48,9 @@ window.WAREHOUSE_SCENARIOS = {
     },
   ],
   acts: [
+    { id: 'running', title: 'Persona corriendo por el almacén', choices: ['Caminar por la ruta peatonal', 'Correr dentro del almacén', 'Detenerse antes de cruzar'], answer: 1, explanation: 'Correr reduce el tiempo para reaccionar ante personas, cargas o vehículos y aumenta el riesgo de tropiezos. Reporta la conducta y camina atento por la ruta peatonal.' },
+    { id: 'forkliftNoStop', title: 'Montacargas que pasa sin detenerse', choices: ['Montacargas detenido antes del cruce', 'Montacargas estacionado', 'Montacargas que ignora el alto'], answer: 2, explanation: 'El operador debe detenerse y comprobar que el cruce esté libre. Si pasa sin parar puede atropellar a alguien. Mantén distancia y reporta; no entres a su trayectoria.' },
+    { id: 'forkliftSpeed', title: 'Montacargas a exceso de velocidad', choices: ['Montacargas circulando a exceso de velocidad', 'Vehículo estacionado', 'Carga almacenada de forma estable'], answer: 0, explanation: 'El exceso de velocidad aumenta la distancia de frenado y el riesgo de atropellamiento o caída de la carga. Permanece fuera de la maniobra y reporta la conducción insegura.' },
     {
       id: 'noHelmet',
       title: 'Persona caminando sin casco',
@@ -110,6 +113,8 @@ window.WAREHOUSE_SCENARIOS = {
     },
   ],
   hazards: [
+    { id: 'glass', title: 'Vidrio en el paso peatonal', choices: ['Piso limpio', 'Vidrio roto en la ruta peatonal', 'Material dentro de su contenedor'], answer: 1, explanation: 'El vidrio puede causar cortes, dañar el calzado o provocar una caída. Evita pisarlo, reporta y solicita delimitar y limpiar el área con el equipo adecuado; no lo recojas con las manos.' },
+    { id: 'slippery', title: 'Piso resbaloso', choices: ['Piso seco', 'Pasillo cerrado', 'Película resbalosa en el piso'], answer: 2, explanation: 'Una película de líquido puede ser difícil de ver y hacerte perder el equilibrio. Evita la zona, reporta y solicita señalización y limpieza segura.' },
     {
       id: 'leaning',
       x: 500,

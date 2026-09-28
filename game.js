@@ -5,8 +5,8 @@
     ctx = canvas.getContext('2d');
   const H = 540,
     FLOOR = 446,
-    WORLD = 8000,
     keys = { left: false, right: false, jump: false };
+  let WORLD = 8000;
   let W = 1200,
     viewHeight = H;
   const baseStorage = [
@@ -38,7 +38,6 @@
     noJumpZones = [],
     focusTokens = [],
     coins = [];
-  const learnedReports = new Set();
   const previousInventory = { STELLA: 0, 'FLYING FISH': 0 };
   let railHeld = false;
   let sector = 1,
@@ -84,10 +83,21 @@
     previous.set(slot, position);
     return position;
   }
+  const scenarioSector = {
+    noVest: 1, noHelmet: 1, phoneWalking: 1, running: 1,
+    leak: 2, leaning: 2,
+    wrap: 3, noHandrail: 3,
+    extinguisher: 4, nearForklift: 4, forkliftNoStop: 4, glass: 4,
+    forkliftSpeed: 5, slippery: 6, spill: 6,
+  };
+  function advancedDifficulty() { return Math.max(0, Math.min(4, sector - 4)); }
+  function availableScenarios(kind) {
+    return window.WAREHOUSE_SCENARIOS[kind].filter(item => sector >= scenarioSector[item.id]);
+  }
   function randomLocations() {
     // Observation bays stay clear of moving equipment, stairs and the inventory pallets.
     const bays = [];
-    for (let x = 470; x < WORLD - 220; x += 190) {
+    for (let x = 470; x < 7780; x += 190) {
       if (crossings.some((c) => x + 85 >= c.x - stopWidth() && x - 85 <= c.x + c.w))
         continue;
       if (stairs.some((s) => x + 85 >= s.x && x - 85 <= s.x + stairWidth(s))) continue;
@@ -95,8 +105,8 @@
       bays.push(x);
     }
     const ids = [
-      ...window.WAREHOUSE_SCENARIOS.hazards.map((h) => h.id),
-      ...window.WAREHOUSE_SCENARIOS.acts
+      ...availableScenarios('hazards').map((h) => h.id),
+      ...availableScenarios('acts')
         .filter((a) => a.id !== 'noHandrail')
         .map((a) => a.id),
     ];
@@ -137,11 +147,12 @@
     const mixed = shuffle(brands);
     const spacing = Math.max(106, 118 - sector * 2);
     pallets.splice(0, pallets.length, ...mixed.map((p, i) => ({
-      ...p, x: (i < count ? 1140 : 2180) + (i % count) * spacing, registered: false,
+      ...p, x: (i < count ? 1140 : 2220) + (i % count) * spacing, registered: false,
     })));
   }
   function inventoryReach() { return sector === 1 ? 115 : Math.max(36, 78 - sector * 6); }
   function buildSector() {
+    WORLD = sector >= 4 ? 12000 : 8000;
     buildInventory();
     stairs.length = 0;
     const count = sector === 1 ? 1 : 2,
@@ -194,7 +205,7 @@
     hazards.splice(
       0,
       hazards.length,
-      ...window.WAREHOUSE_SCENARIOS.hazards.map((h) => ({
+      ...availableScenarios('hazards').map((h) => ({
         ...h,
         x: locations.get(h.id),
         reported: false,
@@ -225,15 +236,15 @@
     workers.splice(
       0,
       workers.length,
-      ...window.WAREHOUSE_SCENARIOS.acts.map((a) => {
+      ...availableScenarios('acts').map((a) => {
         const ground = a.id !== 'noHandrail';
         const stairSide = route.side;
-        const min = ground
+        const min = isPassingForklift(a) ? (a.id === 'forkliftNoStop' ? 9000 : 10600) : ground
           ? locations.get(a.id) - 25
           : stairSide === 'up'
             ? route.s.x + 25
             : route.s.x + run + route.s.deck + 15;
-        const max = ground
+        const max = isPassingForklift(a) ? min + 50 : ground
           ? locations.get(a.id) + 25
           : stairSide === 'up'
             ? route.s.x + run - 15
@@ -338,7 +349,7 @@
     player.ground = true;
     camera = 0;
     hud();
-    toast('Sector ' + sector + ' · ¡El ritmo aumenta!', 2);
+    toast('Sector ' + sector + (sector <= 8 ? ' · Nuevos retos de seguridad.' : ' · Observa y registra con atención.'), 3);
   }
 
   let worn = new Set(),
@@ -408,7 +419,6 @@
     $('#streak').textContent = streak;
   }
   function reset() {
-    learnedReports.clear();
     previousInventory.STELLA = previousInventory['FLYING FISH'] = 0;
     railHeld = false;
     sector = 1;
@@ -607,7 +617,6 @@
   function reportObservation(h) {
     if (h.reported) return;
     h.reported = true;
-    learnedReports.add((h.type === 'act' ? 'act:' : 'hazard:') + h.id);
     if (h.type === 'act') totalActs++;
     else totalReports++;
     streak++;
@@ -615,11 +624,6 @@
     toast(h.type === 'act' ? '✓ Acto reportado' : '✓ Condición reportada', 2);
   }
   function inspectHazard(h) {
-    if (h.reported) { toast('✓ Ya reportaste esta situación.', 2); return; }
-    if (learnedReports.has((h.type === 'act' ? 'act:' : 'hazard:') + h.id)) {
-      reportObservation(h);
-      return;
-    }
     const isAct = h.type === 'act';
     state = 'inspection';
     clearKeys();
@@ -638,7 +642,6 @@
             'Esa opción no corresponde a lo que estás observando. Revisa la escena y la acción de las personas.';
           return;
         }
-        if (h.reported) return;
         reportObservation(h);
         closeInspection();
       };
@@ -704,7 +707,7 @@
     $('#pause').disabled = true;
     $('#overlay').classList.remove('hidden');
     $('#modal').innerHTML =
-      '<div class="end-heading"><p class="eyebrow">FIN DEL TURNO</p><h2>La próxima decisión cuenta.</h2><p class="end-intro">Te quedaste sin vidas. Cada recorrido es una nueva oportunidad para reconocer los riesgos.</p></div><div class="end-body"><div class="end-inventory"><div class="result"><span>Sector: ' +
+      '<div class="end-heading"><p class="eyebrow">FIN DEL TURNO</p><h2>' + (sector >= 5 ? 'Apto para entrar al almacén' : 'No apto para entrar al almacén') + '</h2><p class="end-intro">' + (sector >= 5 ? 'Completaste los primeros 4 sectores del juego. Sigue practicando para mejorar tus resultados.' : 'Necesitas completar los primeros 4 sectores del juego. Vuelve a practicar para reconocer los riesgos y avanzar con seguridad.') + '</p></div><div class="end-body"><div class="end-inventory"><div class="result"><span>Sector: ' +
       sector +
       '</span><span>Monedas: ' +
       totalCoins +
@@ -738,6 +741,9 @@
   }
   function interact() {
     if (state !== 'playing') return;
+    const passing = workers.filter(w => isPassingForklift(w) && passingVisible(w))
+      .sort((a, b) => Number(a.reported) - Number(b.reported) || a.x - b.x)[0];
+    if (passing) { inspectHazard(passing); return; }
     if (player.ground && nearbyHandrail() && !railHeld) {
       toggleHandrail();
       return;
@@ -745,8 +751,7 @@
     const h = [...hazards, ...workers]
       .filter(
         (h) =>
-          !h.reported &&
-          Math.abs(player.x + 16 - h.x) < 90 &&
+          !isPassingForklift(h) && Math.abs(player.x + 16 - h.x) < 90 &&
           player.ground &&
           Math.abs(player.y + player.h - (h.feet ?? FLOOR)) < 85,
       )
@@ -992,6 +997,7 @@
       return;
     }
     updateWorkers(dt);
+    if (state !== 'playing') return;
     player.vx = autoRun
       ? keys.left
         ? 0
@@ -1138,7 +1144,7 @@
       const missed = [...hazards, ...workers]
         .filter(
           (item) =>
-            !item.reported &&
+            !isPassingForklift(item) && !item.reported &&
             !item.missed &&
             player.x + player.w >
               Math.min((item.type === 'act' ? item.max : item.x) + 120, WORLD - 60),
@@ -1148,13 +1154,14 @@
         )[0];
       if (missed) missObservation(missed);
     }
-    if (state === 'playing' && player.x >= WORLD - player.w - 22) advanceSector();
+    if (state === 'playing' && player.x >= WORLD - player.w - 22 &&
+      !workers.some(w => isPassingForklift(w) && w.passing && !w.departed)) advanceSector();
     camera = Math.max(0, Math.min(WORLD - W, player.x - W * 0.3));
     $('#zone').textContent =
       '● SECTOR ' + String(sector).padStart(2, '0') + ' · NIVEL ' + sector;
   }
   function runSpeed() {
-    return 275 + Math.min(250, (sector - 1) * 50);
+    return 300 + (sector - 1) * 8;
   }
   function stopTime() {
     return Math.min(1.6, 0.8 + (sector - 1) * 0.15);
@@ -1385,6 +1392,21 @@
       rect(-9, -17, 18, 30, '#a96537');
       rect(-8, -19, 16, 4, '#ddd4a0');
       ctx.restore();
+    } else if (h.id === 'glass') {
+      const size = sector >= 7 ? 0.65 : 1;
+      ctx.save(); ctx.translate(0, 420); ctx.scale(size, size);
+      for (let i = 0; i < 7; i++) {
+        const x = -35 + i * 11;
+        ctx.fillStyle = '#b7e3e4'; ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x + 9, -6 - (i % 3) * 3); ctx.lineTo(x + 6, 5); ctx.closePath(); ctx.fill();
+        line(x + 3, 0, x + 7, -4, '#fff', 1);
+      }
+      ctx.restore();
+    } else if (h.id === 'slippery') {
+      ctx.fillStyle = sector >= 8 ? '#758785' : '#8dacab';
+      ctx.beginPath(); ctx.ellipse(0, 420, 45, 9, -0.1, 0, Math.PI * 2); ctx.fill();
+      line(-28, 417, 5, 416, '#c2d6ce', 2);
+      line(10, 422, 28, 421, '#d1e1d9', 1);
     } else if (h.id === 'wrap') {
       line(-42, 406, -19, 416, '#dddde0', 5);
       line(-19, 416, 13, 403, '#dddde0', 5);
@@ -1409,10 +1431,36 @@
     }
     ctx.restore();
   }
+  function isPassingForklift(worker) {
+    return worker.id === 'forkliftSpeed' || worker.id === 'forkliftNoStop';
+  }
+  function passingVisible(worker) {
+    return worker.passing && !worker.departed && worker.x + 90 >= camera && worker.x - 90 <= camera + W;
+  }
   function updateWorkers(dt) {
     for (const worker of workers) {
+      if (isPassingForklift(worker)) {
+        if (worker.departed) continue;
+        if (!worker.passing && player.x >= worker.min - 200 &&
+            ![...hazards, ...workers].some(item => !isPassingForklift(item) && !item.reported && !item.missed && (item.max ?? item.x) + 120 < player.x + player.w) &&
+            !workers.some(other => other !== worker && isPassingForklift(other) && other.passing && !other.departed)) {
+          worker.passing = true;
+          worker.x = camera - 95;
+          worker.direction = 1;
+          worker.stopSignX = camera + W * 0.55;
+          worker.feet = FLOOR - 78;
+        }
+        if (!worker.passing) continue;
+        worker.x += (runSpeed() + (worker.id === 'forkliftSpeed' ? 420 + advancedDifficulty() * 25 : 280)) * dt;
+        if (passingVisible(worker)) worker.seen = true;
+        if (worker.seen && worker.x - 90 > camera + W) {
+          worker.departed = true;
+          if (!worker.reported && !worker.missed) { missObservation(worker); return; }
+        }
+        continue;
+      }
       const { min, max } = worker;
-      worker.x += worker.direction * 48 * dt;
+      worker.x += worker.direction * (worker.id === 'running' ? 110 : worker.id === 'forkliftSpeed' ? 140 + advancedDifficulty() * 30 : worker.id === 'forkliftNoStop' ? 85 : 48) * dt;
       if (worker.x >= max) {
         worker.x = max;
         worker.direction = -1;
@@ -1421,10 +1469,30 @@
         worker.direction = 1;
       }
       worker.feet = worker.onStairs ? floorAt(worker.x) : FLOOR;
-      worker.phase += dt * 8;
+      worker.phase += dt * (worker.id === 'running' ? 16 : 8);
     }
   }
   function drawWorker(worker) {
+    if (isPassingForklift(worker)) {
+      if (!worker.passing || worker.departed) return;
+      ctx.save();
+      ctx.translate(0, -78);
+      // An isolated equipment lane keeps the unsafe behavior observable from a distance.
+      rect(worker.min - 90, FLOOR - 4, worker.max - worker.min + 180, 5, '#eeeecc');
+      if (worker.id === 'forkliftNoStop') {
+        rect(worker.stopSignX, FLOOR - 112, 4, 108, '#aaa');
+        rect(worker.stopSignX - 20, FLOOR - 134, 45, 24, '#b82929');
+        text('ALTO', worker.stopSignX + 2, FLOOR - 118, 10, '#fff', 'center');
+        rect(worker.stopSignX, FLOOR - 4, 5, 12, '#fff');
+      }
+      forklift(worker.x, FLOOR, worker.direction);
+      if (worker.id === 'forkliftSpeed') {
+        for (let i = 0; i < 3; i++) line(worker.x - worker.direction * 65, FLOOR - 25 - i * 14, worker.x - worker.direction * 85, FLOOR - 25 - i * 14, '#e5d69a', 2);
+      }
+      if (worker.reported) text('✓ REPORTADO', worker.x, FLOOR - 146, 10, '#b7ea91', 'center');
+      ctx.restore();
+      return;
+    }
     ctx.save();
     ctx.translate(worker.x, worker.feet);
     ctx.scale(worker.direction, 1);
@@ -1626,7 +1694,7 @@
         text('DETENIDO', c.x + c.w - 5, 237, 9, '#b7ea91', 'center');
       } else if (crash !== c)
         forklift(
-          c.x + c.w / 2 + Math.sin(time * (1.5 + Math.min(sector - 1, 10) * 0.3)) * 35,
+          c.x + c.w / 2 + Math.sin(time * (1.5 + advancedDifficulty() * 0.35)) * 35,
           352,
           1,
         );

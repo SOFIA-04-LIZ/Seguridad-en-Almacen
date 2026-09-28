@@ -31,7 +31,7 @@ En dispositivos táctiles, desliza la palanca hacia la izquierda para frenar o h
 
 Al llegar al extremo del sector se genera el siguiente y el personaje continúa con su EPP y sus vidas. No hay puerta final ni pantalla de victoria. La partida comienza con tres vidas y termina al llegar a cero. Se pueden recuperar vidas con monedas seguras, hasta un máximo de cinco.
 
-El personaje avanza automáticamente a 275 unidades por segundo en el primer sector; cada sector añade 50 hasta llegar a 525. Una racha aumenta al cruzar con seguridad, registrar Stella o Flying Fish, reportar observaciones y completar escaleras. También hay puntos de atención opcionales para recoger saltando en espacios libres. Al terminar, se puede reintentar de inmediato con el mismo EPP o cambiarlo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
+El personaje avanza a 300 unidades por segundo en el sector 1; cada sector suma 8 unidades. La dificultad de detección aumenta al incorporar más tipos de riesgo y acto entre los sectores 1 y 8. Una racha aumenta al cruzar con seguridad, registrar Stella o Flying Fish, reportar observaciones y completar escaleras. También hay puntos de atención opcionales para recoger saltando en espacios libres. Al terminar, se puede reintentar de inmediato con el mismo EPP o cambiarlo. Si deja atrás una condición o una conducta sin reportarla, pierde una vida y recibe una explicación; cada omisión se penaliza una sola vez y puede volver a reportarse si quedan vidas.
 
 Los contadores acumulan tarimas de Stella y Flying Fish, monedas, condiciones reportadas, actos inseguros reportados y escaleras recorridas. Cinco monedas recogidas en la ruta segura dan una vida adicional. Las monedas tentadoras aparecen en el centro de dos cruces al acercarse y desaparecen después de un segundo. El tiempo restante se muestra con números negros sobre un recuadro amarillo. Solo se pueden recoger tras esperar la señal; entrar por ella antes de tiempo cuesta una vida y muestra una explicación. Cada sector renueva sus objetos y reportes; las condiciones que se dejaron atrás sin reportar no suman puntos. Los seis objetivos de seguridad se mantienen en cada sector sin un panel de tarjetas.
 
@@ -42,7 +42,7 @@ La dificultad aumenta de forma gradual:
 - Desde el sector 4: cuatro cruces.
 - Las escaleras aumentan hasta 12 peldaños por tramo y los peldaños se estrechan hasta un mínimo de 19 unidades.
 - El tiempo de alto aumenta de 0.8 a un máximo de 1.6 segundos; la zona de detención se estrecha de 115 a un mínimo de 65 unidades.
-- Los montacargas en movimiento aceleran su animación progresivamente. Cuando aparece PASA se detienen.
+- Desde el sector 5 aumenta la velocidad de los montacargas. Los cruces regulados mantienen la señal PASA; el montacargas que ignora el alto aparece como un acto independiente para reportar.
 
 Las escaleras se recorren caminando sobre una superficie escalonada; no son tarimas. No se permite atravesarlas saltando. Una escalera suma al contador después de alcanzar la pasarela y terminar el descenso hacia la derecha.
 
@@ -59,11 +59,11 @@ Cada incidente de equipo ocurre una vez por partida y resta una vida:
 
 Después aparece una explicación. Si quedan vidas, se puede corregir esa elección y continuar. Si no quedan vidas, primero se muestra la explicación y después el resultado. Las animaciones son caricaturescas y sin sangre.
 
-En cada sector hay cinco condiciones para encontrar: tarima inclinada, gotera sobre la ruta peatonal, derrame sin señalizar, flejes/plástico sueltos y extintor bloqueado. Al interactuar se debe identificar la condición entre tres opciones. Una respuesta equivocada no resta vidas. Reportar suma una sola vez por objeto y no elimina visualmente el peligro.
+Las condiciones se incorporan según la progresión indicada abajo: tarima inclinada, gotera sobre la ruta peatonal, derrame sin señalizar, flejes/plástico sueltos y extintor bloqueado. Al interactuar se debe identificar la condición entre tres opciones. Una respuesta equivocada no resta vidas. Reportar suma una sola vez por objeto y no elimina visualmente el peligro.
 
 ## Actos inseguros de las personas
 
-Cada sector incorpora cinco personas animadas:
+Las personas incluyen estas conductas, además de correr y operar montacargas de forma insegura:
 
 - Una persona camina sin casco por el almacén.
 - Otra trabaja sin el chaleco de alta visibilidad requerido.
@@ -95,4 +95,27 @@ Simulación educativa: la selección de EPP corresponde a este escenario fictici
 
 Desde el sector 2, las tarimas se mezclan en dos grupos con cajas azules de Corona y rojas de Victoria. Los grupos crecen hasta cuatro tarimas cada uno, con cuatro objetivos y cuatro distractores en total; la distancia de interacción se reduce progresivamente hasta 36 unidades. Se registra la tarima más cercana: las otras marcas no suman al inventario y cada intento de registrarlas resta 50 puntos. El descuento aparece al interactuar y en los resultados; la puntuación puede ser negativa. El recorrido tiene 8000 unidades para conservar espacio entre grupos, observaciones, cruces y escaleras. Los resultados cuentan las tarimas objetivo reales de todos los sectores iniciados.
 
-Tras identificar correctamente un tipo de acto o riesgo, las siguientes apariciones del mismo tipo se reportan con E sin repetir el cuestionario. Cada objeto nuevo sigue requiriendo un reporte y puede penalizarse si se omite; un objeto ya reportado nunca suma dos veces. Reiniciar la partida borra este aprendizaje.
+Cada interacción con una situación abre las opciones de reporte, aunque ya haya sido identificada o reportada. Volver a acertar sobre el mismo objeto no añade puntos; cada aparición nueva cuenta una vez.
+
+## Progresión de riesgos
+
+Velocidad automática del jugador: 300 unidades por segundo en el sector 1, con un aumento de 8 por sector. La aceleración manual sigue disponible. Cada sector conserva las situaciones anteriores:
+
+- Sector 1: personal sin chaleco, sin casco, hablando por teléfono y corriendo.
+- Sector 2: goteras y tarimas ladeadas.
+- Sector 3: objetos/flejes en el suelo y personas sin usar el pasamanos.
+- Sector 4: extintores bloqueados, personas cerca del montacargas, montacargas que ignora el alto y vidrio en el paso peatonal.
+- Sector 5: montacargas a exceso de velocidad; aumenta gradualmente hasta el sector 8.
+- Sector 6: piso resbaloso y derrames.
+- Sector 7: fragmentos de vidrio más pequeños, todavía visibles.
+- Sector 8: película resbalosa de menor contraste, con reflejos visibles.
+
+Después del sector 8 se conserva la dificultad máxima. Las reglas de EPP, cruces, pasamanos e inventario se mantienen. Los montacargas inseguros tienen una zona de observación separada de los cruces regulados.
+
+Los montacargas que ignoran el alto y los que van a exceso de velocidad hacen una sola pasada hacia adelante por el carril contiguo, desde atrás del jugador. Mientras cualquier parte del vehículo esté en pantalla, E/Interactuar permite reportarlo sin exigir proximidad. Abrir una pregunta pausa la pasada. Al salir por la derecha sin reporte correcto, se pierde una vida y se explica el riesgo; el vehículo no regresa y la omisión no se penaliza de nuevo. Un sector espera a que termine una pasada activa antes de cambiar.
+
+## Tramos exclusivos y resultado tras el sector 4
+
+Desde el sector 4, el almacén se amplía de 8000 a 12000 unidades. Los riesgos normales se quedan antes de la zona final; las pasadas de montacargas tienen tramos exclusivos desde las posiciones 9000 y 10600, separados de cruces, escaleras, inventario y otros riesgos. No empieza otra pasada mientras una siga activa, ni se inicia una si hay una omisión anterior pendiente de explicar.
+
+Al perder desde el sector 5, el resultado del juego muestra «Apto para entrar al almacén», porque se completaron los primeros cuatro sectores. Perder durante el sector 4 todavía no activa ese mensaje; reiniciar borra el progreso.
