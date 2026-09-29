@@ -48,6 +48,30 @@ window.WAREHOUSE_SCENARIOS = {
     },
   ],
   acts: [
+    {
+      id: 'standingPallet',
+      title: 'Persona parada sobre una tarima',
+      choices: [
+        'Usar una plataforma adecuada para alcanzar una zona elevada',
+        'Usar una tarima como plataforma para pararse',
+        'Caminar por el paso peatonal',
+      ],
+      answer: 1,
+      explanation: 'La tarima no es una plataforma para personas: puede desplazarse o romperse y provocar una caída. Reporta el acto y solicita usar un medio de acceso adecuado; no te subas a la tarima.',
+    },
+    {
+      id: 'stairChecklist',
+      title: 'Persona en escalera con carga que bloquea la vista y sin usar el pasamanos',
+      explanation: 'La carga tapa los peldaños y ocupa las manos. Esto impide sujetarse y aumenta el riesgo de caer. Mantén la vista despejada, usa el pasamanos, camina sin correr y traslada la carga por un medio adecuado.',
+      checklist: [
+        { text: 'Sujetarse del pasamanos durante el recorrido.', correct: true },
+        { text: 'Llevar cajas que tapen la vista de los peldaños.', correct: false },
+        { text: 'Ver los peldaños y caminar sin correr ni saltarlos.', correct: true },
+        { text: 'Usar casco, chaleco de alta visibilidad y botas de seguridad.', correct: true },
+        { text: 'Ocupar ambas manos con carga al subir o bajar.', correct: false },
+        { text: 'Usar otro medio para mover una carga que impida sujetarse.', correct: true },
+      ],
+    },
     { id: 'running', title: 'Persona corriendo por el almacén', choices: ['Caminar por la ruta peatonal', 'Correr dentro del almacén', 'Detenerse antes de cruzar'], answer: 1, explanation: 'Correr reduce el tiempo para reaccionar ante personas, cargas o vehículos y aumenta el riesgo de tropiezos. Reporta la conducta y camina atento por la ruta peatonal.' },
     { id: 'forkliftNoStop', title: 'Montacargas que pasa sin detenerse', choices: ['Montacargas detenido antes del cruce', 'Montacargas estacionado', 'Montacargas que ignora el alto'], answer: 2, explanation: 'El operador debe detenerse y comprobar que el cruce esté libre. Si pasa sin parar puede atropellar a alguien. Mantén distancia y reporta; no entres a su trayectoria.' },
     { id: 'forkliftSpeed', title: 'Montacargas a exceso de velocidad', choices: ['Montacargas circulando a exceso de velocidad', 'Vehículo estacionado', 'Carga almacenada de forma estable'], answer: 0, explanation: 'El exceso de velocidad aumenta la distancia de frenado y el riesgo de atropellamiento o caída de la carga. Permanece fuera de la maniobra y reporta la conducción insegura.' },

@@ -86,9 +86,9 @@
   const scenarioSector = {
     noVest: 1, noHelmet: 1, phoneWalking: 1, running: 1,
     leak: 2, leaning: 2,
-    wrap: 3, noHandrail: 3,
+    wrap: 3, noHandrail: 3, standingPallet: 3,
     extinguisher: 4, nearForklift: 4, forkliftNoStop: 4, glass: 4,
-    forkliftSpeed: 5, slippery: 6, spill: 6,
+    forkliftSpeed: 5, slippery: 6, spill: 6, stairChecklist: 7,
   };
   function advancedDifficulty() { return Math.max(0, Math.min(4, sector - 4)); }
   function availableScenarios(kind) {
@@ -107,7 +107,7 @@
     const ids = [
       ...availableScenarios('hazards').map((h) => h.id),
       ...availableScenarios('acts')
-        .filter((a) => a.id !== 'noHandrail')
+        .filter((a) => !['noHandrail', 'stairChecklist'].includes(a.id))
         .map((a) => a.id),
     ];
     function assign(index, available, result) {
@@ -133,12 +133,13 @@
     });
     return locations;
   }
+  function inventoryExtension() { return Math.max(0, sector - 4) * 2 * 114; }
   function buildInventory() {
     if (sector === 1) {
       pallets.splice(0, pallets.length, ...basePallets.map(p => ({ ...p, registered: false })));
       return;
     }
-    const count = Math.min(4, sector);
+    const count = sector;
     const brands = [
       ...Array.from({ length: Math.ceil(count / 2) }, () => ({ brand: 'STELLA', color: '#aa4237' })),
       ...Array.from({ length: Math.floor(count / 2) }, () => ({ brand: 'FLYING FISH', color: '#4b9cb1' })),
@@ -147,12 +148,12 @@
     const mixed = shuffle(brands);
     const spacing = Math.max(106, 118 - sector * 2);
     pallets.splice(0, pallets.length, ...mixed.map((p, i) => ({
-      ...p, x: (i < count ? 1140 : 2220) + (i % count) * spacing, registered: false,
+      ...p, x: i < 8 ? (i < Math.min(4, count) ? 1140 : 2220) + (i % Math.min(4, count)) * spacing : 8000 + (i - 8) * 114, registered: false,
     })));
   }
   function inventoryReach() { return sector === 1 ? 115 : Math.max(36, 78 - sector * 6); }
   function buildSector() {
-    WORLD = sector >= 4 ? 12000 : 8000;
+    WORLD = (sector >= 4 ? 14500 : 10500) + inventoryExtension();
     buildInventory();
     stairs.length = 0;
     const count = sector === 1 ? 1 : 2,
@@ -237,19 +238,21 @@
       0,
       workers.length,
       ...availableScenarios('acts').map((a) => {
-        const ground = a.id !== 'noHandrail';
+        const ground = !['noHandrail', 'stairChecklist'].includes(a.id);
+        const actorStair = a.id === 'stairChecklist' ? stairs.find(s => s !== route.s) || route.s : route.s;
+        const actorRun = actorStair.steps * actorStair.tread;
         const stairSide = route.side;
-        const min = isPassingForklift(a) ? (a.id === 'forkliftNoStop' ? 9000 : 10600) : ground
+        const min = isPassingActor(a) ? ((a.id === 'running' ? 9000 : a.id === 'forkliftNoStop' ? 11000 : 13000) + inventoryExtension()) : ground
           ? locations.get(a.id) - 25
           : stairSide === 'up'
-            ? route.s.x + 25
-            : route.s.x + run + route.s.deck + 15;
-        const max = isPassingForklift(a) ? min + 50 : ground
+            ? actorStair.x + 25
+            : actorStair.x + actorRun + actorStair.deck + 15;
+        const max = isPassingActor(a) ? min + 50 : ground
           ? locations.get(a.id) + 25
           : stairSide === 'up'
-            ? route.s.x + run - 15
-            : route.s.x + stairWidth(route.s) - 25;
-        const x = min + Math.random() * (max - min);
+            ? actorStair.x + actorRun - 15
+            : actorStair.x + stairWidth(actorStair) - 25;
+        const x = a.id === 'standingPallet' ? (min + max) / 2 : min + Math.random() * (max - min);
         return {
           ...a,
           type: 'act',
@@ -259,7 +262,7 @@
           min,
           max,
           x,
-          feet: ground ? FLOOR : floorAt(x),
+          feet: a.id === 'standingPallet' ? FLOOR - 12 : ground ? FLOOR : floorAt(x),
           direction: Math.random() < 0.5 ? -1 : 1,
           phase: Math.random() * Math.PI * 2,
         };
@@ -271,6 +274,7 @@
       ...storage.map((p) => ({ x: p.x - 8, w: p.w + 16 })),
       ...pallets.map((p) => ({ x: p.x - 10, w: 124 })),
       ...hazards.map((h) => ({ x: h.x - 48, w: 96 })),
+      ...workers.filter(w => w.id === 'standingPallet').map(w => ({ x: w.x - 55, w: 110 })),
     );
     const tokenSpots = [];
     for (let x = 500; x < WORLD - 180; x += 150)
@@ -623,7 +627,51 @@
     hud();
     toast(h.type === 'act' ? '✓ Acto reportado' : '✓ Condición reportada', 2);
   }
+  function inspectStairChecklist(h) {
+    state = 'inspection';
+    clearKeys();
+    $('#pause').disabled = true;
+    $('#overlay').classList.remove('hidden');
+    $('#modal').innerHTML = '<div class="stair-checklist"><p class="eyebrow">SEGURIDAD EN ESCALERAS</p><h2>Marca los criterios correctos</h2><p>Marca todas las acciones seguras. Cada error resta una vida. EPP de esta misión: casco, chaleco de alta visibilidad y botas de seguridad.</p><div class="checklist-options" role="group" aria-label="Criterios de seguridad"></div><p class="feedback" role="status"></p><div class="end-actions"><button class="primary" id="check-stairs">Validar y reportar</button><button class="secondary" id="back">Volver a observar</button></div></div>';
+    const selected = new Set();
+    h.checklist.forEach((item, i) => {
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.onchange = () => { if (input.checked) selected.add(i); else selected.delete(i); };
+      const caption = document.createElement('span');
+      caption.textContent = item.text;
+      label.append(input); label.append(caption);
+      $('.checklist-options').append(label);
+    });
+    $('#check-stairs').onclick = () => {
+      if (state !== 'inspection') return;
+      const correct = h.checklist.every((item, i) => selected.has(i) === item.correct);
+      if (!correct) {
+        lives = Math.max(0, lives - 1);
+        streak = 0;
+        hud();
+        $('.feedback').textContent = '−1 vida. Usa pasamanos, mantén la vista libre y camina sin correr. EPP: casco, chaleco y botas de seguridad. Evita cargas que tapen los peldaños u ocupen ambas manos.';
+        if (!lives) {
+          state = 'lesson';
+          $('#back').disabled = true;
+          $('#back').onclick = null;
+          $('#check-stairs').textContent = 'Ver resultado';
+          $('#check-stairs').onclick = finish;
+          $('.checklist-options').children && Array.from($('.checklist-options').children).forEach(label => {
+            label.querySelector('input').disabled = true;
+          });
+        }
+        return;
+      }
+      reportObservation(h);
+      closeInspection();
+      toast('✓ Criterios correctos. Acto reportado.', 3);
+    };
+    $('#back').onclick = closeInspection;
+  }
   function inspectHazard(h) {
+    if (h.checklist) { inspectStairChecklist(h); return; }
     const isAct = h.type === 'act';
     state = 'inspection';
     clearKeys();
@@ -741,7 +789,7 @@
   }
   function interact() {
     if (state !== 'playing') return;
-    const passing = workers.filter(w => isPassingForklift(w) && passingVisible(w))
+    const passing = workers.filter(w => isPassingActor(w) && passingVisible(w))
       .sort((a, b) => Number(a.reported) - Number(b.reported) || a.x - b.x)[0];
     if (passing) { inspectHazard(passing); return; }
     if (player.ground && nearbyHandrail() && !railHeld) {
@@ -751,7 +799,7 @@
     const h = [...hazards, ...workers]
       .filter(
         (h) =>
-          !isPassingForklift(h) && Math.abs(player.x + 16 - h.x) < 90 &&
+          !isPassingActor(h) && Math.abs(player.x + 16 - h.x) < 90 &&
           player.ground &&
           Math.abs(player.y + player.h - (h.feet ?? FLOOR)) < 85,
       )
@@ -1144,7 +1192,7 @@
       const missed = [...hazards, ...workers]
         .filter(
           (item) =>
-            !isPassingForklift(item) && !item.reported &&
+            !isPassingActor(item) && !item.reported &&
             !item.missed &&
             player.x + player.w >
               Math.min((item.type === 'act' ? item.max : item.x) + 120, WORLD - 60),
@@ -1155,13 +1203,13 @@
       if (missed) missObservation(missed);
     }
     if (state === 'playing' && player.x >= WORLD - player.w - 22 &&
-      !workers.some(w => isPassingForklift(w) && w.passing && !w.departed)) advanceSector();
+      !workers.some(w => isPassingActor(w) && w.passing && !w.departed)) advanceSector();
     camera = Math.max(0, Math.min(WORLD - W, player.x - W * 0.3));
     $('#zone').textContent =
       '● SECTOR ' + String(sector).padStart(2, '0') + ' · NIVEL ' + sector;
   }
   function runSpeed() {
-    return 300 + (sector - 1) * 8;
+    return 300 + (sector - 1) * 20;
   }
   function stopTime() {
     return Math.min(1.6, 0.8 + (sector - 1) * 0.15);
@@ -1434,26 +1482,30 @@
   function isPassingForklift(worker) {
     return worker.id === 'forkliftSpeed' || worker.id === 'forkliftNoStop';
   }
+  function isPassingActor(worker) { return isPassingForklift(worker) || worker.id === 'running'; }
   function passingVisible(worker) {
-    return worker.passing && !worker.departed && worker.x + 90 >= camera && worker.x - 90 <= camera + W;
+    const radius = worker.id === 'running' ? 24 : 90;
+    return worker.passing && !worker.departed && worker.x + radius >= camera && worker.x - radius <= camera + W;
   }
   function updateWorkers(dt) {
     for (const worker of workers) {
-      if (isPassingForklift(worker)) {
+      if (worker.id === 'standingPallet') { worker.feet = FLOOR - 12; continue; }
+      if (isPassingActor(worker)) {
         if (worker.departed) continue;
         if (!worker.passing && player.x >= worker.min - 200 &&
-            ![...hazards, ...workers].some(item => !isPassingForklift(item) && !item.reported && !item.missed && (item.max ?? item.x) + 120 < player.x + player.w) &&
-            !workers.some(other => other !== worker && isPassingForklift(other) && other.passing && !other.departed)) {
+            ![...hazards, ...workers].some(item => !isPassingActor(item) && !item.reported && !item.missed && (item.max ?? item.x) + 120 < player.x + player.w) &&
+            !workers.some(other => other !== worker && isPassingActor(other) && other.passing && !other.departed)) {
           worker.passing = true;
-          worker.x = camera - 95;
+          worker.x = camera - (worker.id === 'running' ? 28 : 95);
           worker.direction = 1;
           worker.stopSignX = camera + W * 0.55;
-          worker.feet = FLOOR - 78;
+          worker.feet = worker.id === 'running' ? FLOOR : FLOOR - 78;
         }
         if (!worker.passing) continue;
-        worker.x += (runSpeed() + (worker.id === 'forkliftSpeed' ? 420 + advancedDifficulty() * 25 : 280)) * dt;
+        worker.x += (runSpeed() + (worker.id === 'running' ? 180 : worker.id === 'forkliftSpeed' ? 420 + advancedDifficulty() * 25 : 280)) * dt;
+        worker.phase += dt * 18;
         if (passingVisible(worker)) worker.seen = true;
-        if (worker.seen && worker.x - 90 > camera + W) {
+        if (worker.seen && worker.x - (worker.id === 'running' ? 24 : 90) > camera + W) {
           worker.departed = true;
           if (!worker.reported && !worker.missed) { missObservation(worker); return; }
         }
@@ -1473,6 +1525,11 @@
     }
   }
   function drawWorker(worker) {
+    if (worker.id === 'standingPallet') {
+      rect(worker.x - 51, FLOOR - 12, 102, 7, '#987647');
+      for (let i = 0; i < 3; i++) rect(worker.x - 47 + i * 41, FLOOR - 5, 12, 5, '#715532');
+    }
+    if (worker.id === 'running' && (!worker.passing || worker.departed)) return;
     if (isPassingForklift(worker)) {
       if (!worker.passing || worker.departed) return;
       ctx.save();
@@ -1496,7 +1553,8 @@
     ctx.save();
     ctx.translate(worker.x, worker.feet);
     ctx.scale(worker.direction, 1);
-    const stride = Math.sin(worker.phase) * 5;
+    if (worker.id === 'running') ctx.rotate(0.12);
+    const stride = worker.id === 'standingPallet' ? 0 : Math.sin(worker.phase) * (worker.id === 'running' ? 9 : 5);
     rect(-12, -26, 9, 23 + stride, '#435166');
     rect(3, -26, 9, 23 - stride, '#435166');
     rect(-14, -5 + stride, 14, 6, '#171717');
@@ -1530,6 +1588,11 @@
       rect(16, -57, 6, 7, '#d6a074');
     }
     rect(7, -56, 3, 3, '#222');
+    if (worker.id === 'stairChecklist') {
+      box(8, -69, 35, 35, '', '#c7a36b');
+      line(18, -27, 30, -34, '#495361', 6);
+      rect(27, -36, 7, 5, '#d6a074');
+    }
     ctx.restore();
     if (worker.reported) {
       rect(worker.x - 54, worker.feet - 106, 108, 20, '#1c2920');

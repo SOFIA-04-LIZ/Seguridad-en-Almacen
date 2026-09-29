@@ -31,7 +31,7 @@ function node() {
       this.html = value;
       this.children = [];
       if (this === nodes.get('#modal'))
-        for (const key of ['.equipment', '.hazard-options', '.feedback'])
+        for (const key of ['.equipment', '.hazard-options', '.feedback', '.checklist-options'])
           nodes.delete(key);
     },
     get innerHTML() {
@@ -116,7 +116,7 @@ assert(t.player.x > brakePoint + 20, 'accelerate should increase speed');
 assert.equal(t.epp, false);
 const firstSectorSpeed = t.runSpeed();
 t.advanceSector();
-assert.equal(t.runSpeed(), firstSectorSpeed + 8, 'Each sector adds a small speed increase');
+assert.equal(t.runSpeed(), firstSectorSpeed + 20, 'Each sector adds a small speed increase');
 t.reset();
 $('#start-game').onclick();
 const buttons = $('.equipment').children;
@@ -165,7 +165,7 @@ t.start();
 t.advanceSector();
 const missedHazard = t.hazards[0];
 t.hazards.filter((h) => h !== missedHazard).forEach((h) => (h.reported = true));
-t.workers.forEach((w) => (w.reported = true));
+t.workers.forEach((w) => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
 t.crossings.forEach((c) => (c.cleared = true));
 t.place(missedHazard.x + 110);
 if (t.nearbyHandrail()) t.toggleHandrail();
@@ -324,7 +324,7 @@ assert.equal(t.lives, 3);
 // Complete the full route, inspecting every condition through real answer handlers.
 t.reset();
 t.start();
-t.workers.forEach((w) => (w.reported = true));
+t.workers.forEach((w) => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
 let frames = 0;
 while (t.sector === 1 && frames++ < 5000) {
   const p = t.player,
@@ -409,7 +409,7 @@ let limit = 0;
 const stairCompletions = [];
 while (t.sector < 6 && limit++ < 15000) {
   t.hazards.forEach((h) => (h.reported = true));
-  t.workers.forEach((w) => (w.reported = true));
+  t.workers.forEach((w) => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
   const p = t.player,
     c = t.crossings.find(
       (c) => !c.cleared && p.x + 32 > c.x - t.stopWidth() + 15 && p.x + 32 <= c.x,
@@ -425,7 +425,7 @@ while (t.sector < 6 && limit++ < 15000) {
 }
 assert(limit < 15000);
 assert.equal(t.sector, 6);
-assert.equal(t.runSpeed(), 340);
+assert.equal(t.runSpeed(), 400);
 assert(maxHeight >= 135);
 assert.equal(t.completedStairs, 9, JSON.stringify(stairCompletions));
 assert(t.lives >= 3 && t.lives <= 5);
@@ -470,7 +470,7 @@ assert(phoneWorker.reported);
 assert.equal(t.totalActs, 1);
 t.reset();
 t.start();
-const worker = t.workers[0];
+const worker = t.workers.find(w => w.id === 'phoneWalking');
 const initialX = worker.x;
 step(30);
 assert.notEqual(worker.x, initialX);
@@ -506,7 +506,7 @@ assert.equal(t.totalReports, 0);
 t.render();
 // Reports survive sector changes; new people are reportable and full reset clears the totals.
 t.hazards.forEach((h) => (h.reported = true));
-t.workers.forEach((w) => (w.reported = true));
+t.workers.forEach((w) => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
 t.place(t.world - 40);
 t.keys.right = true;
 step(10);
@@ -540,7 +540,7 @@ for (let layout = 0; layout < 120; layout++) {
     t.start();
   } else t.advanceSector();
   const positions = new Map(t.hazards.map((h) => [h.id, h.x]));
-  for (const walker of t.workers.filter((w) => !w.onStairs && !w.id.startsWith('forklift')))
+  for (const walker of t.workers.filter((w) => !w.onStairs && !w.id.startsWith('forklift') && w.id !== 'running'))
     positions.set(walker.id, (walker.min + walker.max) / 2);
   for (const crossing of t.crossings) {
     assert(
@@ -653,7 +653,7 @@ console.log('PASS: score breakdown, unique distance, sector accumulation, duplic
 t.reset();
 t.start();
 t.hazards.forEach(h => h.reported = true);
-t.workers.forEach(w => w.reported = true);
+t.workers.forEach(w => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
 const railStair = t.stairs[0];
 t.place(railStair.x - 17);
 t.keys.right = true;
@@ -682,7 +682,7 @@ assert.equal(t.railHeld, false);
 for (const remaining of [1, 0]) {
   t.advanceSector();
   t.hazards.forEach(h => h.reported = true);
-  t.workers.forEach(w => w.reported = true);
+  t.workers.forEach(w => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
   t.place(t.stairs[0].x - 17);
   t.keys.right = true;
   step();
@@ -695,7 +695,7 @@ assert.equal(t.state, 'lost');
 t.reset();
 t.start();
 t.hazards.forEach(h => h.reported = true);
-t.workers.forEach(w => w.reported = true);
+t.workers.forEach(w => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
 t.place(t.stairs[0].x - 70);
 t.interact();
 assert(t.railHeld);
@@ -733,7 +733,7 @@ t.reset(); t.start();
 let expectedStella = 0, expectedFish = 0;
 for (let level = 1; level <= 12; level++) {
   const targets = t.pallets.filter(p => ['STELLA','FLYING FISH'].includes(p.brand));
-  assert.equal(targets.length, level === 1 ? 2 : Math.min(4, level));
+  assert.equal(targets.length, level === 1 ? 2 : level);
   assert.equal(t.pallets.length, level === 1 ? 2 : targets.length * 2);
   expectedStella += targets.filter(p => p.brand === 'STELLA').length;
   expectedFish += targets.filter(p => p.brand === 'FLYING FISH').length;
@@ -742,7 +742,7 @@ for (let level = 1; level <= 12; level++) {
     assert(t.stairs.every(st => pallet.x + 114 < st.x || pallet.x > st.x + t.stairWidth(st)));
   }
   t.hazards.forEach(h => h.reported = true);
-  t.workers.forEach(w => w.reported = true);
+  t.workers.forEach(w => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
   for (const pallet of t.pallets) {
     const before = t.totalPallets + t.totalFish;
     t.place(pallet.x + 37);
@@ -762,7 +762,7 @@ console.log('PASS: repeatable report choices without duplicate credit, reset, 12
 // Incorrect inventory subtracts points on each attempt and survives sector changes.
 t.reset(); t.start(); t.advanceSector();
 t.hazards.forEach(h => h.reported = true);
-t.workers.forEach(w => w.reported = true);
+t.workers.forEach(w => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
 const incorrect = t.pallets.find(p => p.brand === 'CORONA');
 t.place(incorrect.x + 37);
 t.interact();
@@ -796,10 +796,10 @@ const progression = [
 ];
 for (let level = 1; level <= 8; level++) {
   const base = progression[Math.min(level, 4) - 1];
-  const expected = { hazards: [...base.hazards, ...(level >= 6 ? ['slippery','spill'] : [])], acts: [...base.acts, ...(level >= 5 ? ['forkliftSpeed'] : [])] };
+  const expected = { hazards: [...base.hazards, ...(level >= 6 ? ['slippery','spill'] : [])], acts: [...base.acts, ...(level >= 5 ? ['forkliftSpeed'] : []), ...(level >= 7 ? ['stairChecklist'] : []), ...(level >= 3 ? ['standingPallet'] : [])] };
   assert.deepEqual(Array.from(t.hazards, h => h.id).sort(), [...expected.hazards].sort());
   assert.deepEqual(Array.from(t.workers, w => w.id).sort(), [...expected.acts].sort());
-  assert.equal(t.runSpeed(), 300 + (level - 1) * 8);
+  assert.equal(t.runSpeed(), 300 + (level - 1) * 20);
   assert(t.hazards.every(h => Number.isFinite(h.x)));
   assert(t.workers.every(w => Number.isFinite(w.x)));
   t.render();
@@ -811,12 +811,12 @@ assert.equal(t.workers.length, 4);
 console.log('PASS: cumulative scenarios through sector 8, 300-unit player speed and reset.');
 
 // Passing forklifts travel forward once and can be reported anywhere on screen.
-for (const id of ['forkliftNoStop', 'forkliftSpeed']) {
+for (const id of ['forkliftNoStop', 'forkliftSpeed', 'running']) {
   for (const shouldReport of [false, true]) {
     t.reset(); t.start();
     while (t.sector < 5) t.advanceSector();
     t.hazards.forEach(h => h.reported = true);
-    t.workers.forEach(w => { if (w.id !== id) { w.reported = true; if (w.id.startsWith('forklift')) w.departed = true; } });
+    t.workers.forEach(w => { if (w.id !== id) { w.reported = true; if (w.id.startsWith('forklift') || w.id === 'running') w.departed = true; } });
     const truck = t.workers.find(w => w.id === id);
     t.place(truck.min - 190);
     t.render();
@@ -883,3 +883,93 @@ assert.match($('#modal').innerHTML, /Apto para entrar al almacén/);
 t.reset(); t.finish();
 assert.match($('#modal').innerHTML, /No apto para entrar al almacén/);
 console.log('PASS: isolated forklift stretches and qualification only after completing sector four.');
+
+// The level-seven stair checklist requires all safe criteria and rejects unsafe ones.
+t.reset(); t.start();
+while (t.sector < 6) t.advanceSector();
+assert(!t.workers.some(w => w.id === 'stairChecklist'));
+t.advanceSector();
+const checklistActor = t.workers.find(w => w.id === 'stairChecklist');
+assert(checklistActor && checklistActor.onStairs);
+assert.equal(checklistActor.feet, t.floorAt(checklistActor.x));
+t.place(checklistActor.x - 16, checklistActor.feet - 66);
+t.interact(); // Take the handrail before reporting the act.
+t.interact();
+assert.equal(t.state, 'inspection');
+assert.equal($('.checklist-options').children.length, 6);
+$('#check-stairs').onclick();
+assert(!checklistActor.reported);
+assert.equal(t.lives, 2);
+const inputs = $('.checklist-options').children.map(label => label.children[0]);
+inputs.forEach(input => { input.checked = true; input.onchange(); });
+$('#check-stairs').onclick();
+assert(!checklistActor.reported, 'Selecting every option must not pass');
+assert.equal(t.lives, 1);
+assert.match($('#modal').innerHTML, /casco, chaleco de alta visibilidad y botas de seguridad/);
+inputs.forEach((input, i) => { input.checked = checklistActor.checklist[i].correct; input.onchange(); });
+$('#check-stairs').onclick();
+assert(checklistActor.reported);
+assert.equal(t.totalActs, 1);
+assert.equal(t.state, 'playing');
+t.inspectHazard(checklistActor);
+$('.checklist-options').children.forEach((label, i) => { const input = label.children[0]; input.checked = checklistActor.checklist[i].correct; input.onchange(); });
+$('#check-stairs').onclick();
+assert.equal(t.totalActs, 1);
+t.advanceSector();
+assert(t.workers.some(w => w.id === 'stairChecklist' && !w.reported));
+console.log('PASS: level-seven checklist, unsafe selection rejection, correction, real interaction, repeat reporting and later sectors.');
+
+// The final checklist mistake shows the explanation before ending the game.
+const finalChecklist = t.workers.find(w => w.id === 'stairChecklist');
+t.inspectHazard(finalChecklist);
+$('#check-stairs').onclick();
+assert.equal(t.lives, 0);
+assert.equal(t.state, 'lesson');
+assert(!finalChecklist.reported);
+assert.equal($('#back').disabled, true);
+assert.match($('.feedback').textContent, /−1 vida/);
+$('#check-stairs').onclick();
+assert.equal(t.state, 'lost');
+assert.equal(t.lives, 0);
+console.log('PASS: checklist life penalties, required EPP and final-life explanation/results.');
+
+// A person standing directly on a bare pallet appears from sector three and is reportable from the floor.
+t.reset(); t.start(); t.advanceSector();
+assert(!t.workers.some(w => w.id === 'standingPallet'));
+t.advanceSector();
+const palletWorker = t.workers.find(w => w.id === 'standingPallet');
+assert(palletWorker);
+assert.equal(palletWorker.feet, 446 - 12);
+const palletWorkerX = palletWorker.x;
+t.updateWorkers(1);
+assert.equal(palletWorker.x, palletWorkerX);
+assert.equal(palletWorker.feet, 434);
+assert(t.noJumpZones.some(z => palletWorker.x >= z.x && palletWorker.x <= z.x + z.w));
+t.place(palletWorker.x - 16);
+if (t.nearbyHandrail() && !t.railHeld) t.toggleHandrail();
+t.interact();
+assert.equal(t.state, 'inspection');
+$('.hazard-options').children[(palletWorker.answer + 1) % 3].onclick();
+assert(!palletWorker.reported);
+$('.hazard-options').children[palletWorker.answer].onclick();
+assert(palletWorker.reported);
+assert.equal(t.totalActs, 1);
+t.render();
+t.advanceSector();
+assert(t.workers.some(w => w.id === 'standingPallet' && !w.reported));
+console.log('PASS: sector-three pallet act, stationary elevated person, ground interaction and later sectors.');
+
+// Runners have a clear dedicated stretch, separate from other observation scenes.
+for (const level of [1, 3, 7]) {
+  t.reset(); t.start();
+  while (t.sector < level) t.advanceSector();
+  const runner = t.workers.find(w => w.id === 'running');
+  assert(runner.min >= 9000);
+  assert(t.hazards.every(h => h.x + 800 < runner.min));
+  assert(t.pallets.every(p => p.x + 114 + 800 < runner.min));
+  assert(t.crossings.every(c => c.x + c.w + 800 < runner.min));
+  assert(t.stairs.every(s => s.x + t.stairWidth(s) + 800 < runner.min));
+  assert(t.workers.filter(w => w !== runner && !w.id.startsWith('forklift')).every(w => w.max + 800 < runner.min));
+  assert(t.workers.filter(w => w.id.startsWith('forklift')).every(w => w.min > runner.max + 800));
+}
+console.log('PASS: isolated runner scene in early and advanced sectors.');
