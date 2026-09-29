@@ -51,7 +51,8 @@ const document = {
   createElement: node,
   addEventListener() {},
 };
-const context = new Proxy({}, { get: () => () => {}, set: () => true });
+let canvasCalls = 0;
+const context = new Proxy({}, { get: () => () => { canvasCalls++; }, set: () => true });
 document.querySelector('#game').getContext = () => context;
 document.querySelector('#game').getBoundingClientRect = () => ({
   width: 1200,
@@ -70,7 +71,7 @@ vm.runInContext(
 );
 const code = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8').replace(
   /reset\(\);\s*requestAnimationFrame\(frame\);/,
-  `reset();globalThis.test={updateWorkers,passingVisible,pallets,inventoryReach,inspectHazard,get world(){return WORLD},toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
+  `reset();globalThis.test={frame,updateWorkers,passingVisible,pallets,inventoryReach,inspectHazard,get world(){return WORLD},toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
  get sector(){return sector},get totalFish(){return totalFish},get totalCoins(){return totalCoins},get fishFound(){return fishFound},get streak(){return streak},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
  get player(){return player},get state(){return state},get lives(){return lives},get worn(){return worn},get epp(){return epp},get incident(){return incident},get triggered(){return triggered},get found(){return found},
  start(ids=['helmet','vest','boots']){worn=new Set(ids);state='playing';hud()},
@@ -240,7 +241,7 @@ t.interact();
 assert.equal(t.state, 'inspection');
 $('.hazard-options').children[(t.hazards[0].answer + 1) % 3].onclick();
 assert.equal(t.hazards[0].reported, false);
-assert.equal(t.lives, 3);
+assert.equal(t.lives, 2);
 $('.hazard-options').children[t.hazards[0].answer].onclick();
 assert.equal(t.hazards[0].reported, true);
 assert.equal(t.state, 'playing');
@@ -733,7 +734,7 @@ t.reset(); t.start();
 let expectedStella = 0, expectedFish = 0;
 for (let level = 1; level <= 12; level++) {
   const targets = t.pallets.filter(p => ['STELLA','FLYING FISH'].includes(p.brand));
-  assert.equal(targets.length, level === 1 ? 2 : level);
+  assert.equal(targets.length, level === 1 ? 2 : level >= 3 ? level * 2 : level);
   assert.equal(t.pallets.length, level === 1 ? 2 : targets.length * 2);
   expectedStella += targets.filter(p => p.brand === 'STELLA').length;
   expectedFish += targets.filter(p => p.brand === 'FLYING FISH').length;
@@ -843,7 +844,7 @@ for (const id of ['forkliftNoStop', 'forkliftSpeed', 'running']) {
     }
     assert(truck.departed);
     assert(!t.passingVisible(truck));
-    assert.equal(t.lives, shouldReport ? 3 : 2);
+    assert.equal(t.lives, shouldReport ? 3 : 1);
     assert.equal(t.totalActs, shouldReport ? 1 : 0);
     if (!shouldReport) {
       assert.equal(t.state, 'lesson');
@@ -853,7 +854,7 @@ for (const id of ['forkliftNoStop', 'forkliftSpeed', 'running']) {
     const departedX = truck.x;
     t.updateWorkers(5);
     assert.equal(truck.x, departedX);
-    assert.equal(t.lives, shouldReport ? 3 : 2, 'No repeated penalty after departure');
+    assert.equal(t.lives, shouldReport ? 3 : 1, 'No repeated penalty after departure');
   }
 }
 console.log('PASS: one-way visible forklift reports, paused inspection, missed passage penalty and no repeat penalties.');
@@ -973,3 +974,74 @@ for (const level of [1, 3, 7]) {
   assert(t.workers.filter(w => w.id.startsWith('forklift')).every(w => w.min > runner.max + 800));
 }
 console.log('PASS: isolated runner scene in early and advanced sectors.');
+
+// Static dialogs do not redraw continuously; hidden tabs perform no drawing.
+t.reset(); t.start(); t.pause();
+t.frame(1000);
+const pausedCalls = canvasCalls;
+t.frame(1020); t.frame(1040);
+assert.equal(canvasCalls, pausedCalls);
+t.pause();
+t.frame(1060);
+assert(canvasCalls > pausedCalls);
+const activeCalls = canvasCalls;
+t.frame(1065);
+assert.equal(canvasCalls, activeCalls, 'High-refresh frames are skipped');
+document.hidden = true;
+t.frame(1080);
+assert.equal(canvasCalls, activeCalls);
+document.hidden = false;
+t.reset();
+t.frame(1100);
+assert(canvasCalls > activeCalls, 'Reset invalidates the static scene');
+console.log('PASS: paused/hidden drawing suppression, high-refresh frame limit and reset redraw.');
+
+// Exclusive passages also vary, without repeating their previous position.
+const previousPassagePositions = new Map();
+for (let layout = 0; layout < 40; layout++) {
+  t.reset(); t.start();
+  while (t.sector < 5) t.advanceSector();
+  for (const actor of t.workers.filter(w => w.id === 'running' || w.id.startsWith('forklift'))) {
+    const previous = previousPassagePositions.get(actor.id);
+    // Rebuild the same sector to check the immediately preceding position.
+    previousPassagePositions.set(actor.id, actor.min);
+  }
+  t.buildSector();
+  for (const actor of t.workers.filter(w => w.id === 'running' || w.id.startsWith('forklift')))
+    assert(Math.abs(actor.min - previousPassagePositions.get(actor.id)) >= 100);
+}
+// Any wrong observation answer costs a life; the final mistake cannot bypass results.
+for (const kind of ['hazards', 'workers']) {
+  t.reset(); t.start(); t.advanceSector();
+  const observation = t[kind].find(item => !item.checklist);
+  t.inspectHazard(observation);
+  const wrong = $('.hazard-options').children[(observation.answer + 1) % 3];
+  for (const remaining of [2, 1, 0]) {
+    wrong.onclick();
+    assert.equal(t.lives, remaining);
+    assert(!observation.reported);
+    assert($('.feedback').textContent.includes(observation.explanation));
+  }
+  assert.equal(t.state, 'lesson');
+  $('.hazard-options').children[observation.answer].onclick();
+  assert(!observation.reported);
+  assert.equal(t.lives, 0);
+  $('#back').onclick();
+  assert.equal(t.state, 'lost');
+}
+console.log('PASS: randomized exclusive passages and wrong-answer life penalties through game over.');
+
+// More correct and incorrect inventory is guaranteed from sector three; layout varies.
+t.reset(); t.start(); t.advanceSector(); t.advanceSector();
+assert.equal(t.pallets.length, 12);
+assert.equal(t.pallets.filter(p => ['STELLA', 'FLYING FISH'].includes(p.brand)).length, 6);
+const inventoryLayouts = new Set();
+for (let attempt = 0; attempt < 20; attempt++) {
+  t.buildSector();
+  inventoryLayouts.add(t.pallets.map(p => p.x + ':' + p.brand).join(','));
+  assert.equal(t.pallets.length, 12);
+}
+assert(inventoryLayouts.size > 1);
+t.advanceSector();
+assert.equal(t.pallets.length, 16);
+console.log('PASS: guaranteed larger mixed inventory from sector three and randomized positions.');

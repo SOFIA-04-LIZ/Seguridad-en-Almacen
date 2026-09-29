@@ -6,6 +6,7 @@
   const H = 540,
     FLOOR = 446,
     keys = { left: false, right: false, jump: false };
+  let renderDirty = true, lastRenderedState = null;
   let WORLD = 8000;
   let W = 1200,
     viewHeight = H;
@@ -53,6 +54,7 @@
     totalActs = 0;
   const MAX_LIVES = 5;
   const previousLocations = new Map();
+  const previousPassages = new Map();
   const previousCrossings = new Map(),
     previousStairs = new Map();
   let previousStairRoute = '',
@@ -107,25 +109,25 @@
     const ids = [
       ...availableScenarios('hazards').map((h) => h.id),
       ...availableScenarios('acts')
-        .filter((a) => !['noHandrail', 'stairChecklist'].includes(a.id))
+        .filter((a) => !['noHandrail', 'stairChecklist'].includes(a.id) && !isPassingActor(a))
         .map((a) => a.id),
     ];
-    function assign(index, available, result) {
-      if (index === ids.length) return result;
-      for (const bay of shuffle(available)) {
-        if (previousLocations.get(ids[index]) === bay) continue;
-        const next = assign(
-          index + 1,
-          available.filter((x) => x !== bay),
-          [...result, bay],
-        );
-        if (next) return next;
+    // Match each observation to a distinct bay without enumerating permutations.
+    const candidates = ids.map(id => shuffle(bays.filter(bay => previousLocations.get(id) !== bay)));
+    const owners = new Map(), chosen = new Array(ids.length), locations = new Map();
+    function assign(index, visited) {
+      for (const bay of candidates[index]) {
+        if (visited.has(bay)) continue;
+        visited.add(bay);
+        if (!owners.has(bay) || assign(owners.get(bay), visited)) {
+          owners.set(bay, index);
+          chosen[index] = bay;
+          return true;
+        }
       }
-      return null;
+      return false;
     }
-    const chosen = assign(0, bays, []),
-      locations = new Map();
-    if (!chosen)
+    if (!ids.every((_, index) => assign(index, new Set())))
       throw new Error('No hay espacio para todas las observaciones del sector');
     ids.forEach((id, i) => {
       previousLocations.set(id, chosen[i]);
@@ -133,25 +135,44 @@
     });
     return locations;
   }
-  function inventoryExtension() { return Math.max(0, sector - 4) * 2 * 114; }
+  function inventoryTargetCount() { return sector >= 3 ? sector * 2 : sector; }
+  function inventoryExtension() { return sector >= 3 ? (inventoryTargetCount() * 2 - 4) * 180 : 0; }
   function buildInventory() {
     if (sector === 1) {
       pallets.splice(0, pallets.length, ...basePallets.map(p => ({ ...p, registered: false })));
       return;
     }
-    const count = sector;
+    const count = inventoryTargetCount();
     const brands = [
       ...Array.from({ length: Math.ceil(count / 2) }, () => ({ brand: 'STELLA', color: '#aa4237' })),
       ...Array.from({ length: Math.floor(count / 2) }, () => ({ brand: 'FLYING FISH', color: '#4b9cb1' })),
       ...Array.from({ length: count }, (_, i) => ({ brand: i % 2 ? 'VICTORIA' : 'CORONA', color: i % 2 ? '#aa4237' : '#4b9cb1' })),
     ];
     const mixed = shuffle(brands);
-    const spacing = Math.max(106, 118 - sector * 2);
+    const slots = [0, 106, 212, 318];
+    const firstCount = sector >= 3 ? 2 + Math.floor(Math.random() * 3) : 2;
+    const secondCount = sector >= 3 ? 2 + Math.floor(Math.random() * 3) : 2;
+    const firstOffset = Math.floor(Math.random() * 16), secondOffset = sector === 2 ? 0 : Math.floor(Math.random() * 6);
+    const positions = [
+      ...shuffle(slots).slice(0, firstCount).map(offset => 1140 + offset + firstOffset),
+      ...shuffle(slots).slice(0, secondCount).map(offset => 2220 + offset + secondOffset),
+    ];
+    for (let i = 0; positions.length < mixed.length; i++)
+      positions.push(8000 + i * 180 + Math.floor(Math.random() * 55));
+    positions.sort((a, b) => a - b);
     pallets.splice(0, pallets.length, ...mixed.map((p, i) => ({
-      ...p, x: i < 8 ? (i < Math.min(4, count) ? 1140 : 2220) + (i % Math.min(4, count)) * spacing : 8000 + (i - 8) * 114, registered: false,
+      ...p, x: positions[i], registered: false,
     })));
   }
+
   function inventoryReach() { return sector === 1 ? 115 : Math.max(36, 78 - sector * 6); }
+  function passagePosition(actor) {
+    const base = (actor.id === 'running' ? 9000 : actor.id === 'forkliftNoStop' ? 11000 : 13000) + inventoryExtension();
+    const position = shuffle([0, 100, 200, 300]).map(offset => base + offset)
+      .find(x => Math.abs(x - (previousPassages.get(actor.id) ?? -Infinity)) >= 100);
+    previousPassages.set(actor.id, position);
+    return position;
+  }
   function buildSector() {
     WORLD = (sector >= 4 ? 14500 : 10500) + inventoryExtension();
     buildInventory();
@@ -242,7 +263,7 @@
         const actorStair = a.id === 'stairChecklist' ? stairs.find(s => s !== route.s) || route.s : route.s;
         const actorRun = actorStair.steps * actorStair.tread;
         const stairSide = route.side;
-        const min = isPassingActor(a) ? ((a.id === 'running' ? 9000 : a.id === 'forkliftNoStop' ? 11000 : 13000) + inventoryExtension()) : ground
+        const min = isPassingActor(a) ? passagePosition(a) : ground
           ? locations.get(a.id) - 25
           : stairSide === 'up'
             ? actorStair.x + 25
@@ -423,6 +444,7 @@
     $('#streak').textContent = streak;
   }
   function reset() {
+    renderDirty = true;
     previousInventory.STELLA = previousInventory['FLYING FISH'] = 0;
     railHeld = false;
     sector = 1;
@@ -685,9 +707,18 @@
       const b = document.createElement('button');
       b.textContent = choice;
       b.onclick = () => {
+        if (state !== 'inspection') return;
         if (i !== h.answer) {
-          $('.feedback').textContent =
-            'Esa opción no corresponde a lo que estás observando. Revisa la escena y la acción de las personas.';
+          lives = Math.max(0, lives - 1);
+          streak = 0;
+          hud();
+          $('.feedback').textContent = '−1 vida. ' + h.explanation;
+          if (!lives) {
+            state = 'lesson';
+            for (const option of $('.hazard-options').children) option.disabled = true;
+            $('#back').textContent = 'Ver resultado';
+            $('#back').onclick = finish;
+          }
           return;
         }
         reportObservation(h);
@@ -1205,8 +1236,8 @@
     if (state === 'playing' && player.x >= WORLD - player.w - 22 &&
       !workers.some(w => isPassingActor(w) && w.passing && !w.departed)) advanceSector();
     camera = Math.max(0, Math.min(WORLD - W, player.x - W * 0.3));
-    $('#zone').textContent =
-      '● SECTOR ' + String(sector).padStart(2, '0') + ' · NIVEL ' + sector;
+    const zone = '● SECTOR ' + String(sector).padStart(2, '0') + ' · NIVEL ' + sector;
+    if ($('#zone').textContent !== zone) $('#zone').textContent = zone;
   }
   function runSpeed() {
     return 300 + (sector - 1) * 20;
@@ -1665,13 +1696,16 @@
       );
     }
   }
+  function inView(x, width = 0, margin = 120) {
+    return x + width >= camera - margin && x <= camera + W + margin;
+  }
   function render() {
     ctx.clearRect(0, 0, W, viewHeight);
     ctx.save();
     ctx.translate(0, viewHeight - H);
     rect(0, 0, W, H, '#525252');
     const bg = camera * 0.35;
-    for (let i = -1; i < 9; i++) {
+    for (let i = -1; i < Math.ceil(W / 180) + 1; i++) {
       const x = i * 180 - (bg % 180);
       rect(x, 0, 4, 335, '#3a3a3a');
       rect(x + 25, 25, 120, 54, '#93938c');
@@ -1685,7 +1719,7 @@
     rect(0, 446, W, 94, '#303030');
     ctx.save();
     ctx.translate(-camera, 0);
-    for (let r = 0; r < Math.ceil(WORLD / 292); r++) {
+    for (let r = Math.max(0, Math.floor((camera - 320) / 292)); r < Math.min(Math.ceil(WORLD / 292), Math.ceil((camera + W) / 292)); r++) {
       const x = 80 + r * 292;
       rect(x, 145, 240, 211, '#41413d');
       for (let level = 0; level < 3; level++) {
@@ -1717,10 +1751,11 @@
     rect(0, 361, WORLD, 4, '#222222');
     rect(0, 451, WORLD, 5, '#ffc600');
     rect(0, 508, WORLD, 5, '#ffc600');
-    for (let x = 36; x < WORLD; x += 132)
+    for (let x = 36 + Math.max(0, Math.floor((camera - 96) / 132)) * 132; x < Math.min(WORLD, camera + W); x += 132)
       for (let stripe = 0; stripe < 5; stripe++)
         rect(x + stripe * 12, 468, 7, 29, '#ffc600');
     for (const p of storage) {
+      if (!inView(p.x, p.w)) continue;
       ctx.save();
       ctx.translate(0, -78);
       rect(p.x, p.y, p.w, p.h, '#a59363');
@@ -1732,6 +1767,7 @@
       ctx.restore();
     }
     for (const c of crossings) {
+      if (!inView(c.x - stopWidth(), c.w + stopWidth())) continue;
       rect(c.x - stopWidth(), FLOOR, stopWidth() - 5, 62, '#ffc600');
       text('ALTO', c.x - stopWidth() / 2, 482, 15, '#181818', 'center');
       rect(c.x, 353, c.w, 166, '#242424');
@@ -1763,7 +1799,7 @@
         );
     }
     for (const coin of coins) {
-      if (coin.collected || (coin.risky && !coin.active)) continue;
+      if (coin.collected || (coin.risky && !coin.active) || !inView(coin.x)) continue;
       ctx.fillStyle = coin.risky ? '#ffdd52' : '#ffd537';
       ctx.beginPath();
       ctx.arc(coin.x, coin.y, 12, 0, Math.PI * 2);
@@ -1785,7 +1821,7 @@
       }
     }
     for (const token of focusTokens) {
-      if (token.collected) continue;
+      if (token.collected || !inView(token.x)) continue;
       ctx.save();
       ctx.translate(token.x, token.y);
       ctx.rotate(time * 2);
@@ -1793,13 +1829,13 @@
       rect(-5, -5, 10, 10, '#fff0a0');
       ctx.restore();
     }
-    pallets.forEach(pallet);
-    hazards.forEach(drawHazard);
-    stairs.forEach(drawStairs);
+    for (const p of pallets) if (inView(p.x, 114)) pallet(p);
+    for (const h of hazards) if (inView(h.x)) drawHazard(h);
+    for (const st of stairs) if (inView(st.x - 130, stairWidth(st) + 130)) drawStairs(st);
     workers
-      .filter((w) => w.id === 'nearForklift')
+      .filter((w) => w.id === 'nearForklift' && inView(w.x, 200))
       .forEach((w) => forklift(w.x + 100, FLOOR, -1));
-    workers.forEach(drawWorker);
+    for (const worker of workers) if (inView(worker.x)) drawWorker(worker);
     character();
     drawIncident();
     if (state === 'dying' && crash)
@@ -1823,6 +1859,7 @@
     rect(W - 194, 43, 154 * Math.min(1, player.x / (WORLD - 70)), 3, '#ffc600');
   }
   function resize() {
+    renderDirty = true;
     const bounds = canvas.getBoundingClientRect();
     if (!bounds.height || !bounds.width) return;
     viewHeight = bounds.height < 300 && bounds.width > bounds.height ? 360 : H;
@@ -1845,10 +1882,22 @@
   if (typeof ResizeObserver !== 'undefined')
     new ResizeObserver(resize).observe(document.querySelector('.stage'));
   function frame(now) {
+    // Do not render at 120/144 Hz on high-refresh displays.
+    if (last && now - last < 1000 / 60 - 0.5) {
+      requestAnimationFrame(frame);
+      return;
+    }
     const dt = Math.min((now - last) / 1000 || 0, 0.035);
     last = now;
-    update(dt);
-    render();
+    if (!document.hidden) {
+      const animated = ['playing', 'incident', 'dying'].includes(state);
+      if (animated) update(dt);
+      if (animated || renderDirty || lastRenderedState !== state) {
+        render();
+        renderDirty = false;
+        lastRenderedState = state;
+      }
+    }
     requestAnimationFrame(frame);
   }
   reset();

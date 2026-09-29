@@ -59,7 +59,7 @@ Cada incidente de equipo ocurre una vez por partida y resta una vida:
 
 Después aparece una explicación. Si quedan vidas, se puede corregir esa elección y continuar. Si no quedan vidas, primero se muestra la explicación y después el resultado. Las animaciones son caricaturescas y sin sangre.
 
-Las condiciones se incorporan según la progresión indicada abajo: tarima inclinada, gotera sobre la ruta peatonal, derrame sin señalizar, flejes/plástico sueltos y extintor bloqueado. Al interactuar se debe identificar la condición entre tres opciones. Una respuesta equivocada no resta vidas. Reportar suma una sola vez por objeto y no elimina visualmente el peligro.
+Las condiciones se incorporan según la progresión indicada abajo: tarima inclinada, gotera sobre la ruta peatonal, derrame sin señalizar, flejes/plástico sueltos y extintor bloqueado. Al interactuar se debe identificar la condición entre tres opciones. Cada respuesta equivocada resta una vida y muestra la explicación. Reportar suma una sola vez por objeto y no elimina visualmente el peligro.
 
 ## Actos inseguros de las personas
 
@@ -71,7 +71,7 @@ Las personas incluyen estas conductas, además de correr y operar montacargas de
 - Otra camina hablando por teléfono y deja de prestar atención a la ruta.
 - Otra sube y baja por la escalera con las manos junto al cuerpo, sin sujetarse del pasamanos.
 
-El jugador puede acercarse e interactuar con E para identificar la conducta entre tres opciones. La interacción toma en cuenta la posición y la altura de la persona. Las escenas se detienen mientras se responde. Una respuesta incorrecta permite reintentar sin perder vidas; la correcta suma una sola vez al contador ACTOS y confirma el reporte sin interrumpir el recorrido.
+El jugador puede acercarse e interactuar con E para identificar la conducta entre tres opciones. La interacción toma en cuenta la posición y la altura de la persona. Las escenas se detienen mientras se responde. Una respuesta incorrecta resta una vida y permite reintentar si quedan vidas; la correcta suma una sola vez al contador ACTOS y confirma el reporte sin interrumpir el recorrido.
 
 Los actos se contabilizan por separado de las condiciones del entorno. Cada sector genera personas nuevas para observar y conserva los totales de la partida. Antes de reportar no hay marcadores ni avisos encima de las personas. El personaje del jugador extiende una mano hacia el pasamanos solo cuando el jugador decide sujetarse con E o el botón «Interactuar».
 
@@ -129,3 +129,13 @@ Desde el sector 7 hay una segunda persona en una escalera que lleva una caja tap
 Desde el sector 3 aparece una persona parada directamente sobre una tarima sin cajas. Se reporta desde el piso con E/Interactuar, identificando que la tarima no es una plataforma para personas. La tarima no puede usarse para saltar o subir. El acto continúa en los sectores posteriores y su omisión sigue la regla de pérdida de una vida.
 
 La persona corriendo tiene su propio tramo exclusivo, después de todos los riesgos e inventario y antes de los montacargas. Sus posiciones base son 9000 (persona), 11000 (montacargas sin alto) y 13000 (montacargas rápido), desplazadas por la ampliación del inventario. El recorrido mide 10500 unidades antes del sector 4 y 14500 desde el sector 4, más dicha ampliación. Las pasadas siguen siendo de una en una.
+
+## Rendimiento
+
+El render dibuja únicamente estanterías, señalización y objetos dentro de la vista o de su margen; los objetos fuera de pantalla conservan su lógica. En menús, pausas, preguntas y resultados solo se redibuja cuando cambia la escena o su tamaño. Las pestañas ocultas no dibujan y las pantallas de alta frecuencia se limitan a aproximadamente 60 cuadros por segundo. La asignación de posiciones usa emparejamiento de zonas en vez de buscar permutaciones completas.
+
+`node tests/performance.cjs` comprueba que las llamadas de dibujo se mantienen acotadas al avanzar de sector. Es una medición de operaciones de canvas con un contexto simulado, no de FPS ni del consumo real de CPU/GPU. `node tests/game.test.cjs` incluye pruebas de pausa, pestaña oculta y límite de refresco.
+
+Las posiciones de inicio de la persona corriendo y de los montacargas también varían aleatoriamente dentro de sus tramos exclusivos y no repiten la posición de la aparición anterior. Se mantiene la separación respecto a los demás riesgos. Cada respuesta incorrecta al identificar un riesgo o acto resta una vida; al llegar a cero se muestra la explicación y el botón para ir a resultados.
+
+Desde el nivel 3 se garantiza más inventario: 12 tarimas en el 3, 16 en el 4, 20 en el 5 y cuatro más por nivel. La mitad son objetivos (Stella/Flying Fish) y la mitad distractores (Corona/Victoria). Se mezclan las marcas, se varían los tamaños de los grupos iniciales y se aleatorizan las posiciones del inventario adicional. Los corredores y montacargas conservan tramos separados.
