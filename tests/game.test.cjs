@@ -71,7 +71,7 @@ vm.runInContext(
 );
 const code = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8').replace(
   /reset\(\);\s*requestAnimationFrame\(frame\);/,
-  `reset();globalThis.test={frame,updateWorkers,passingVisible,pallets,inventoryReach,inspectHazard,get world(){return WORLD},toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
+  `reset();globalThis.test={collectCoin,frame,updateWorkers,passingVisible,pallets,inventoryReach,inspectHazard,get world(){return WORLD},toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
  get sector(){return sector},get totalFish(){return totalFish},get totalCoins(){return totalCoins},get fishFound(){return fishFound},get streak(){return streak},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
  get player(){return player},get state(){return state},get lives(){return lives},get worn(){return worn},get epp(){return epp},get incident(){return incident},get triggered(){return triggered},get found(){return found},
  start(ids=['helmet','vest','boots']){worn=new Set(ids);state='playing';hud()},
@@ -277,17 +277,25 @@ t.interact();
 assert(t.fishFound);
 assert.equal(t.totalFish, 1);
 assert.equal(t.totalFish, 1);
-// Coins on the safe route grant an extra life after five pickups.
-t.reset();
-t.start();
-const safeCoins = t.coins.filter((c) => !c.risky);
-assert(safeCoins.length >= 5);
-for (const coin of safeCoins.slice(0, 5)) {
-  t.place(coin.x - 16);
-  step();
+// Coins are scarce and life progress carries over between sectors.
+t.reset(); t.start();
+let collected = 0;
+while (collected < 15) {
+  const safeCoins = t.coins.filter(c => !c.risky);
+  assert(safeCoins.length > 0 && safeCoins.length <= 4);
+  for (let i = 1; i < safeCoins.length; i++) assert(safeCoins[i].x - safeCoins[i - 1].x >= 1200);
+  for (const coin of safeCoins) {
+    if (collected === 15) break;
+    t.collectCoin(coin);
+    collected++;
+    assert.equal(t.lives, collected < 15 ? 3 : 4);
+  }
+  if (collected < 15) t.advanceSector();
 }
-assert.equal(t.totalCoins, 5);
+assert.equal(t.totalCoins, 15);
 assert.equal(t.lives, 4);
+t.hazards.forEach(h => h.reported = true);
+t.workers.forEach(w => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
 const risky = t.coins.find((c) => c.risky);
 assert(risky);
 assert(!risky.collected);

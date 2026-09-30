@@ -53,6 +53,7 @@
     completedStairs = 0,
     totalActs = 0;
   const MAX_LIVES = 5;
+  const COINS_PER_LIFE = 15;
   const previousLocations = new Map();
   const previousPassages = new Map();
   const previousCrossings = new Map(),
@@ -314,7 +315,7 @@
         .map((x) => ({ x, y: 350, collected: false })),
     );
     const safeSpots = [];
-    for (let x = 190; x < WORLD - 90; x += 165) {
+    for (let x = 400; x < 7780; x += 165) {
       if (
         noJumpZones.some((z) => x > z.x - 55 && x < z.x + z.w + 55) ||
         crossings.some((c) => x > c.x - stopWidth() - 45 && x < c.x + c.w + 45) ||
@@ -324,10 +325,16 @@
         continue;
       safeSpots.push(x);
     }
+    const sparseSpots = [];
+    for (const x of shuffle(safeSpots)) {
+      if (sparseSpots.every(other => Math.abs(x - other) >= 1200) &&
+          trapCrossings.every(c => Math.abs(x - (c.x + c.w / 2)) >= 800)) sparseSpots.push(x);
+      if (sparseSpots.length === 4) break;
+    }
     coins.splice(
       0,
       coins.length,
-      ...safeSpots.map((x) => ({ x, y: 400, collected: false, risky: false })),
+      ...sparseSpots.sort((a, b) => a - b).map((x) => ({ x, y: 400, collected: false, risky: false })),
       ...trapCrossings.map((c) => ({
         x: c.x + c.w / 2,
         y: 400,
@@ -990,12 +997,12 @@
     totalCoins++;
     coinsTowardLife++;
     streak++;
-    if (coinsTowardLife >= 5) {
+    if (coinsTowardLife >= COINS_PER_LIFE) {
       coinsTowardLife = 0;
       if (lives < MAX_LIVES) {
         lives++;
-        toast('¡Cinco monedas seguras! +1 vida', 3);
-      } else toast('¡Cinco monedas seguras! Vida al máximo', 3);
+        toast('¡15 monedas seguras! +1 vida', 3);
+      } else toast('¡15 monedas seguras! Vida al máximo', 3);
     }
     hud();
   }
