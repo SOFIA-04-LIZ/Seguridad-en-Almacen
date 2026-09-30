@@ -386,7 +386,7 @@
     player.ground = true;
     camera = 0;
     hud();
-    toast('Sector ' + sector + (sector <= 8 ? ' · Nuevos retos de seguridad.' : ' · Observa y registra con atención.'), 3);
+    toast('Sector ' + sector + (sector <= 8 ? ' · Nuevos retos de seguridad.' : ' · Recorrido infinito: sigue observando y registrando.'), 3);
   }
 
   let worn = new Set(),

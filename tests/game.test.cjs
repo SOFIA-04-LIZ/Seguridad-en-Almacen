@@ -471,6 +471,7 @@ const phoneWorker = t.workers.find((w) => w.id === 'phoneWalking');
 assert(phoneWorker && !phoneWorker.onStairs);
 assert.equal(phoneWorker.feet, 446);
 t.place(phoneWorker.x - 16, phoneWorker.feet - 66);
+if (t.nearbyHandrail() && !t.railHeld) t.toggleHandrail();
 t.interact();
 assert.equal(t.state, 'inspection');
 assert(
@@ -486,6 +487,7 @@ const initialX = worker.x;
 step(30);
 assert.notEqual(worker.x, initialX);
 t.place(worker.x - 16, worker.feet - 66);
+if (t.nearbyHandrail() && !t.railHeld) t.toggleHandrail();
 t.interact();
 assert.equal(t.state, 'inspection');
 $('.hazard-options').children[(worker.answer + 1) % 3].onclick();
@@ -1083,3 +1085,24 @@ t.reset();
 assert.equal(t.lives, 3);
 assert.equal(t.scoreSummary().penalty, 0);
 console.log('PASS: half-life inventory omissions, single penalty, half-heart display, game over and reset.');
+
+// Reaching the actual boundary continues indefinitely, including after sector 100.
+t.reset(); t.start();
+for (let level = 1; level <= 100; level++) {
+  assert.equal(t.sector, level);
+  t.hazards.forEach(h => h.reported = true);
+  t.workers.forEach(w => { w.reported = true; w.departed = true; });
+  t.pallets.forEach(p => p.registered = true);
+  t.crossings.forEach(c => c.cleared = true);
+  const livesBefore = t.lives;
+  const pointsBefore = t.scoreSummary().total;
+  t.place(t.world - t.player.w - 23);
+  t.keys.right = true;
+  t.update(1 / 60);
+  assert.equal(t.sector, level + 1);
+  assert.equal(t.state, 'playing');
+  assert.equal(t.lives, livesBefore);
+  assert(t.scoreSummary().total >= pointsBefore);
+}
+assert.equal(t.sector, 101);
+console.log('PASS: 100 actual sector boundaries, no final level, lives and cumulative progress preserved.');
