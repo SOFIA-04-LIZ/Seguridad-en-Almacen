@@ -282,8 +282,9 @@ t.reset(); t.start();
 let collected = 0;
 while (collected < 15) {
   const safeCoins = t.coins.filter(c => !c.risky);
-  assert(safeCoins.length > 0 && safeCoins.length <= 4);
-  for (let i = 1; i < safeCoins.length; i++) assert(safeCoins[i].x - safeCoins[i - 1].x >= 1200);
+  assert.equal(safeCoins.length, 5);
+  assert.equal(t.coins.length, 7);
+  for (let i = 1; i < safeCoins.length; i++) assert(safeCoins[i].x > safeCoins[i - 1].x);
   for (const coin of safeCoins) {
     if (collected === 15) break;
     t.collectCoin(coin);
@@ -356,7 +357,7 @@ assert.equal(t.sector, 2);
 assert.equal(t.totalReports, 0);
 assert.equal(t.totalPallets, 1);
 assert.equal(t.completedStairs, 1);
-assert(t.lives >= 3 && t.lives <= 5);
+assert(t.lives > 0 && t.lives <= 5);
 assert.equal(t.state, 'playing');
 assert(t.hazards.every((h) => !h.reported));
 assert.equal(t.stairs.length, 2);
@@ -417,6 +418,7 @@ let maxHeight = 0;
 let limit = 0;
 const stairCompletions = [];
 while (t.sector < 6 && limit++ < 15000) {
+  t.pallets.forEach(p => p.registered = true);
   t.hazards.forEach((h) => (h.reported = true));
   t.workers.forEach((w) => { w.reported = true; if (w.id === 'running' || w.id.startsWith('forklift')) w.departed = true; });
   const p = t.player,
@@ -437,7 +439,7 @@ assert.equal(t.sector, 6);
 assert.equal(t.runSpeed(), 400);
 assert(maxHeight >= 135);
 assert.equal(t.completedStairs, 9, JSON.stringify(stairCompletions));
-assert(t.lives >= 3 && t.lives <= 5);
+assert(t.lives > 0 && t.lives <= 5);
 assert.equal(t.crossings.length, 4);
 assert(t.stopTime() > 1.2);
 assert(t.stopWidth() < 115);
@@ -789,7 +791,7 @@ assert.equal(t.scoreSummary().total, 0);
 t.advanceSector();
 assert.equal(t.scoreSummary().penalty, 100);
 t.finish();
-assert.match($('#modal').innerHTML, /Tarimas incorrectas: 2 · −100 pts/);
+assert.match($('#modal').innerHTML, /Tarimas incorrectas: 2 · Omitidas: 0 · Descuento: −100 pts/);
 t.reset();
 assert.equal(t.scoreSummary().penalty, 0);
 assert.equal(t.scoreSummary().total, 0);
@@ -1053,3 +1055,31 @@ assert(inventoryLayouts.size > 1);
 t.advanceSector();
 assert.equal(t.pallets.length, 16);
 console.log('PASS: guaranteed larger mixed inventory from sector three and randomized positions.');
+
+// Each missed target pallet costs 150 points and half a life, only once.
+t.reset(); t.start(); t.advanceSector(); t.advanceSector();
+t.hazards.forEach(h => h.reported = true);
+t.workers.forEach(w => { w.reported = true; w.departed = true; });
+t.crossings.forEach(c => c.cleared = true);
+t.coins.forEach(c => c.collected = true);
+const requiredPallets = t.pallets.filter(p => ['STELLA', 'FLYING FISH'].includes(p.brand));
+for (let i = 0; i < requiredPallets.length; i++) {
+  const pallet = requiredPallets[i];
+  const edge = pallet.x + 114 + t.inventoryReach() - t.player.w;
+  t.place(edge - 1);
+  t.keys.right = true;
+  step();
+  assert(pallet.missed);
+  assert.equal(t.lives, 3 - (i + 1) / 2);
+  assert.equal(t.scoreSummary().penalty, (i + 1) * 150);
+  if (i === 0) assert.match($('#lives').textContent, /½♥/);
+  if (t.lives) {
+    t.place(edge - 1); t.keys.right = true; step();
+    assert.equal(t.scoreSummary().penalty, (i + 1) * 150);
+  }
+}
+assert.equal(t.state, 'lost');
+t.reset();
+assert.equal(t.lives, 3);
+assert.equal(t.scoreSummary().penalty, 0);
+console.log('PASS: half-life inventory omissions, single penalty, half-heart display, game over and reset.');

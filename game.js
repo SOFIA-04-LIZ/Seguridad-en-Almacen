@@ -48,6 +48,7 @@
     totalPallets = 0,
     totalFish = 0,
     incorrectPallets = 0,
+    missedPallets = 0,
     totalCoins = 0,
     coinsTowardLife = 0,
     completedStairs = 0,
@@ -325,11 +326,15 @@
         continue;
       safeSpots.push(x);
     }
-    const sparseSpots = [];
-    for (const x of shuffle(safeSpots)) {
-      if (sparseSpots.every(other => Math.abs(x - other) >= 1200) &&
-          trapCrossings.every(c => Math.abs(x - (c.x + c.w / 2)) >= 800)) sparseSpots.push(x);
-      if (sparseSpots.length === 4) break;
+    let sparseSpots = [];
+    const candidates = safeSpots.filter(x => trapCrossings.every(c => Math.abs(x - (c.x + c.w / 2)) >= 300));
+    for (const gap of [900, 600, 300, 0]) {
+      sparseSpots = [];
+      for (const x of shuffle(candidates)) {
+        if (sparseSpots.every(other => Math.abs(x - other) >= gap)) sparseSpots.push(x);
+        if (sparseSpots.length === 5) break;
+      }
+      if (sparseSpots.length === 5) break;
     }
     coins.splice(
       0,
@@ -432,7 +437,7 @@
     toastTime = seconds;
   }
   function hud() {
-    $('#lives').textContent = '♥ '.repeat(lives) + '♡ '.repeat(MAX_LIVES - lives);
+    $('#lives').textContent = '♥ '.repeat(Math.floor(lives)) + (lives % 1 ? '½♥ ' : '') + '♡ '.repeat(MAX_LIVES - Math.ceil(lives));
     $('#lives').setAttribute('aria-label', lives + ' vidas');
     $('#life-number').textContent = lives + '/' + MAX_LIVES;
     $('#count').textContent = totalPallets;
@@ -460,6 +465,7 @@
       totalPallets =
       totalFish =
       incorrectPallets =
+      missedPallets =
       totalCoins =
       coinsTowardLife =
       completedStairs =
@@ -564,7 +570,7 @@
   }
   function missObservation(item) {
     item.missed = true;
-    lives--;
+    lives = Math.max(0, lives - 1);
     streak = 0;
     state = 'lesson';
     clearKeys();
@@ -604,7 +610,7 @@
   function startIncident(s) {
     incident = s;
     triggered.add(s.id);
-    lives--;
+    lives = Math.max(0, lives - 1);
     streak = 0;
     state = 'incident';
     deathTime = 1.1;
@@ -778,14 +784,14 @@
     const travel = Math.floor(distance / 100);
     const risks = totalReports * 150;
     const acts = totalActs * 150;
-    const penalty = incorrectPallets * 50;
+    const penalty = incorrectPallets * 50 + missedPallets * 150;
     return { distance, inventory, travel, risks, acts, penalty, total: inventory + travel + risks + acts - penalty };
   }
   function scoreMarkup() {
     const score = scoreSummary();
     return '<section class="score-result" aria-label="Puntuación final"><span aria-hidden="true">🏆</span> <strong>' + score.total + ' puntos</strong>' +
       '<div class="score-breakdown"><span>📦 Inventario: ' + score.inventory + ' pts</span><span>↗ Recorrido: ' + score.travel + ' pts</span><span>⚠ Riesgos: ' + score.risks + ' pts</span><span>👷 Actos: ' + score.acts + ' pts</span></div>' +
-      '<p>Tarimas incorrectas: ' + incorrectPallets + ' · −' + score.penalty + ' pts. Distancia recorrida: ' + score.distance + ' unidades. Tarima: +100; riesgo o acto correcto: +150; cada 100 unidades nuevas: +1.</p></section>';
+      '<p>Tarimas incorrectas: ' + incorrectPallets + ' · Omitidas: ' + missedPallets + ' · Descuento: −' + score.penalty + ' pts. Distancia recorrida: ' + score.distance + ' unidades. Tarima: +100; riesgo o acto correcto: +150; cada 100 unidades nuevas: +1.</p></section>';
   }
   function finish() {
     state = 'lost';
@@ -880,7 +886,7 @@
   }
   function missHandrail(stair) {
     stair.handrailMissed = true;
-    lives--;
+    lives = Math.max(0, lives - 1);
     streak = 0;
     state = 'lesson';
     clearKeys();
@@ -1000,14 +1006,14 @@
     if (coinsTowardLife >= COINS_PER_LIFE) {
       coinsTowardLife = 0;
       if (lives < MAX_LIVES) {
-        lives++;
+        lives = Math.min(MAX_LIVES, lives + 1);
         toast('¡15 monedas seguras! +1 vida', 3);
       } else toast('¡15 monedas seguras! Vida al máximo', 3);
     }
     hud();
   }
   function hit(c) {
-    lives--;
+    lives = Math.max(0, lives - 1);
     streak = 0;
     state = 'dying';
     deathTime = 0.9;
@@ -1225,6 +1231,20 @@
         (s) => !triggered.has(s.id) && player.x >= s.x && needsIncident(s),
       );
       if (next) startIncident(next);
+    }
+    if (state === 'playing' && player.x > oldX) {
+      for (const pallet of pallets) {
+        const limit = pallet.x + 114 + inventoryReach();
+        if (!pallet.registered && !pallet.missed && ['STELLA', 'FLYING FISH'].includes(pallet.brand) && oldX + player.w <= limit && player.x + player.w > limit) {
+          pallet.missed = true;
+          missedPallets++;
+          lives = Math.max(0, lives - 0.5);
+          streak = 0;
+          hud();
+          toast('Tarima ' + pallet.brand + ' sin registrar: −150 puntos y −½ vida.', 4);
+          if (!lives) { finish(); break; }
+        }
+      }
     }
     if (state === 'playing' && player.vx > 0) {
       const missed = [...hazards, ...workers]
