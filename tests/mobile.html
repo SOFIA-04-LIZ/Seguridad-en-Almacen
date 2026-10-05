@@ -9,6 +9,7 @@
     <iframe id="app" style="border: 0" src="../index.html"></iframe>
     <script>
       const sizes = [
+        [320, 480],
         [320, 568],
         [360, 640],
         [390, 844],
@@ -43,6 +44,17 @@
             if (win.getComputedStyle(hero).display !== 'none') {
               const title = box('.hero h1');
               check(title.left >= 0 && title.right <= width, 'heading clipped');
+              for (const selector of ['.creator-highlight', '.creator-highlight strong', 'footer .creator-credit', 'footer .creator-credit b']) {
+                const element = doc.querySelector(selector);
+                const rect = element.getBoundingClientRect();
+                check(rect.left >= 0 && rect.right <= width + 1, selector + ' clipped');
+                check(element.textContent.includes('Sofia Lizeth Jimenez Serna'), 'creator name missing');
+              }
+              check(
+                parseFloat(win.getComputedStyle(doc.querySelector('.creator-highlight strong')).fontSize) <
+                  parseFloat(win.getComputedStyle(doc.querySelector('.hero h1')).fontSize),
+                'creator credit competes with game title',
+              );
               if (width <= 700)
                 check(
                   parseFloat(
