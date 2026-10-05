@@ -2298,3 +2298,12 @@ body:has(#overlay:not(.hidden) .stair-checklist) { overflow: hidden; }
   .checklist-options label { min-height: 44px; padding: 5px 8px; font-size: 11px; }
   #modal .stair-checklist h2 { font-size: 20px; }
 }
+
+footer { flex-wrap: wrap; }
+footer .creator-credit {
+  flex-basis: 100%;
+  padding-bottom: 10px;
+  line-height: 1.6;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
