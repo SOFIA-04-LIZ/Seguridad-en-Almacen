@@ -8,9 +8,10 @@
     />
     <meta name="theme-color" content="#111111" />
     <title>Almacén Seguro · La ruta Stella</title>
-    <link rel="stylesheet" href="styles.css?v=20260917-titulo" />
+    <link rel="stylesheet" href="styles.css?v=20261012-shared" />
     <script src="scenarios.js" defer></script>
-    <script src="game.js?v=20260917-rutas" defer></script>
+    <script src="ranking.js?v=20261012-shared" defer></script>
+    <script src="game.js?v=20261012-shared" defer></script>
   </head>
   <body>
     <header>
@@ -178,6 +179,16 @@
           <button data-key="interact">Interactuar</button>
           <button data-key="jump">Saltar</button>
         </div>
+      </section>
+
+      <section class="ranking-panel" aria-labelledby="ranking-title">
+        <p class="eyebrow">LAS MEJORES MARCAS</p>
+        <h2 id="ranking-title">🏆 Ranking · Top 5</h2>
+        <p>Al terminar, guarda tu nombre si alcanzas un puesto. En empates se conserva el orden de llegada.</p>
+        <div id="ranking-board"></div>
+        <p id="ranking-network-status" role="status" aria-live="polite">Cargando ranking compartido…</p>
+        <button id="ranking-refresh" class="secondary" type="button">Actualizar ranking</button>
+        <p class="ranking-note">Ranking compartido entre dispositivos. Necesitas conexión para consultar y guardar puntajes.</p>
       </section>
 
       <footer>

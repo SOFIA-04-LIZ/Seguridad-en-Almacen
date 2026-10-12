@@ -141,3 +141,13 @@ Las posiciones de inicio de la persona corriendo y de los montacargas también v
 Desde el nivel 3 se garantiza más inventario: 12 tarimas en el 3, 16 en el 4, 20 en el 5 y cuatro más por nivel. La mitad son objetivos (Stella/Flying Fish) y la mitad distractores (Corona/Victoria). Se mezclan las marcas, se varían los tamaños de los grupos iniciales y se aleatorizan las posiciones del inventario adicional. Los corredores y montacargas conservan tramos separados.
 
 Pasar de largo una tarima Stella/Flying Fish sin registrar descuenta 150 puntos y media vida, una sola vez por tarima. Las tarimas distractoras no generan penalización por omisión. El marcador admite medias vidas; recuperar una vida nunca supera el máximo de cinco y cualquier penalización se limita a cero como mínimo. El resultado incluye las omisiones en el descuento de puntos.
+
+## Ranking de cinco puestos
+
+Al terminar una partida, si hay lugares disponibles o el puntaje supera al quinto puesto, se solicita el nombre (hasta 30 caracteres). Guardar ordena los puntajes de mayor a menor y conserva únicamente cinco registros. En empates, la marca anterior conserva prioridad. Cada partida puede guardarse una sola vez. El ranking aparece también debajo del juego y persiste al recargar o reiniciar mediante `localStorage` del mismo navegador; no se comparte entre dispositivos. Si el navegador bloquea el almacenamiento, se muestra un mensaje y se permite reintentar.
+
+## Ranking compartido con Supabase
+
+`ranking.js` conecta GitHub Pages con las funciones de `supabase-ranking.sql` usando la clave publicable del proyecto. Carga la tabla al abrir la página y al terminar una partida; el botón Actualizar ranking vuelve a consultarla. Guardar valida el puesto en la base de datos y conserva cinco registros con prioridad a las marcas anteriores en empates. No requiere cuentas de los jugadores. El juego funciona sin conexión, pero el ranking compartido requiere internet y no sustituye errores de red con registros locales.
+
+Publica `index.html`, `game.js`, `ranking.js` y `styles.css` juntos. El SQL ya instalado no necesita ejecutarse de nuevo. Las marcas locales anteriores no se importan automáticamente. La puntuación se calcula en el navegador; este ranking informal no verifica la autenticidad de una partida contra modificaciones del cliente.

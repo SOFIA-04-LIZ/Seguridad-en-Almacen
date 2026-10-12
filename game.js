@@ -457,6 +457,9 @@
   }
   function reset() {
     renderDirty = true;
+    rankingSaved = false;
+    rankingBusy = false;
+    rankingRun = rankingService ? rankingService.newRun() : null;
     previousInventory.STELLA = previousInventory['FLYING FISH'] = 0;
     railHeld = false;
     sector = 1;
@@ -793,6 +796,108 @@
       '<div class="score-breakdown"><span>📦 Inventario: ' + score.inventory + ' pts</span><span>↗ Recorrido: ' + score.travel + ' pts</span><span>⚠ Riesgos: ' + score.risks + ' pts</span><span>👷 Actos: ' + score.acts + ' pts</span></div>' +
       '<p>Tarimas incorrectas: ' + incorrectPallets + ' · Omitidas: ' + missedPallets + ' · Descuento: −' + score.penalty + ' pts. Distancia recorrida: ' + score.distance + ' unidades. Tarima: +100; riesgo o acto correcto: +150; cada 100 unidades nuevas: +1.</p></section>';
   }
+  const RANKING_KEY = 'warehouse-safe-route-top5-v1';
+  let rankingSaved = false, rankingBusy = false, rankingRun = null;
+  let sharedRanking = [], rankingLoaded = false;
+  const rankingService = window.WAREHOUSE_RANKING;
+  function readRanking() {
+    if (rankingService) return sharedRanking;
+    try {
+      const entries = JSON.parse(window.localStorage.getItem(RANKING_KEY) || '[]');
+      if (!Array.isArray(entries)) return [];
+      return entries.filter(entry => entry && typeof entry.name === 'string' && entry.name.trim() && Number.isSafeInteger(entry.score))
+        .map(entry => ({ name: entry.name.trim().slice(0, 30), score: entry.score }))
+        .sort((a, b) => b.score - a.score).slice(0, 5);
+    } catch { return []; }
+  }
+  function rankingPosition(score, entries = readRanking()) {
+    // Existing players keep their position in a tie.
+    const position = entries.filter(entry => entry.score >= score).length;
+    return position < 5 ? position : -1;
+  }
+  function rankingMarkup(entries = readRanking()) {
+    const escape = name => name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+    return '<table class="ranking-table"><thead><tr><th scope="col">Puesto</th><th scope="col">Nombre</th><th scope="col">Puntos</th></tr></thead><tbody>' +
+      Array.from({ length: 5 }, (_, index) => '<tr><td>' + (index + 1) + '</td><th scope="row">' + (entries[index] ? escape(entries[index].name) : 'Disponible') + '</th><td>' + (entries[index] ? entries[index].score : '—') + '</td></tr>').join('') + '</tbody></table>';
+  }
+  function renderRanking() {
+    $('#ranking-board').innerHTML = rankingMarkup();
+    const endBoard = $('#end-ranking-board');
+    if (endBoard) endBoard.innerHTML = rankingMarkup();
+  }
+  async function refreshRanking() {
+    if (!rankingService) return;
+    const run = rankingRun;
+    try {
+      const entries = await rankingService.list();
+      if (!Array.isArray(entries) || entries.some(entry => typeof entry.name !== 'string' || !Number.isSafeInteger(entry.score))) throw new Error('Invalid ranking');
+      sharedRanking = entries.slice(0, 5);
+      rankingLoaded = true;
+      renderRanking();
+      $('#ranking-network-status').textContent = 'Ranking compartido · Actualizado';
+      if (state === 'lost' && run === rankingRun && !rankingBusy && !rankingSaved) setupRankingEntry();
+    } catch {
+      $('#ranking-network-status').textContent = 'No se pudo actualizar el ranking. Revisa tu conexión y pulsa Actualizar.';
+      if (state === 'lost' && run === rankingRun && !rankingLoaded) $('#ranking-status').textContent = 'No se pudo cargar el ranking. Pulsa Actualizar ranking para reintentar.';
+    }
+  }
+  function setupRankingEntry() {
+    const score = scoreSummary().total;
+    const position = rankingService && !rankingLoaded ? -1 : rankingPosition(score);
+    $('#end-ranking').innerHTML = '<h3>🏆 Ranking · Top 5</h3><div id="end-ranking-board">' + rankingMarkup() + '</div>' +
+      (!rankingSaved && position >= 0 ? '<form id="ranking-form"><p>¡Tu puntaje alcanza el puesto ' + (position + 1) + '! Guarda tu nombre.</p><label for="ranking-name">Tu nombre</label><div class="ranking-entry"><input id="ranking-name" name="name" maxlength="30" autocomplete="nickname" required placeholder="Escribe tu nombre" /><button class="primary" type="submit">Guardar puntaje</button></div></form>' : '<p>' + (rankingSaved ? 'Tu puntaje ya está registrado.' : rankingService && !rankingLoaded ? 'Cargando el ranking compartido…' : 'Supera el puntaje del quinto puesto para entrar al ranking.') + '</p>') +
+      '<p id="ranking-status" role="status" aria-live="polite"></p>' + (rankingService ? '<button id="end-ranking-refresh" class="secondary" type="button">Actualizar ranking</button>' : '');
+    if (rankingService) $('#end-ranking-refresh').onclick = refreshRanking;
+    const form = $('#ranking-form');
+    if (!rankingSaved && position >= 0 && form) form.onsubmit = async event => {
+      event.preventDefault();
+      if (rankingSaved || rankingBusy) return;
+      const name = $('#ranking-name').value.trim().slice(0, 30);
+      if (!name) { $('#ranking-status').textContent = 'Escribe tu nombre para guardar el puntaje.'; return; }
+      if (rankingService) {
+        const run = rankingRun;
+        const status = $('#ranking-status');
+        const button = form.querySelector('button');
+        rankingBusy = true;
+        button.disabled = true;
+        status.textContent = 'Guardando puntaje…';
+        try {
+          const result = await rankingService.submit(run, name, score);
+          if (run !== rankingRun || state !== 'lost') return;
+          if (result.accepted) {
+            rankingSaved = true;
+            form.hidden = true;
+            status.textContent = '¡Guardado! ' + name + ', ocupas el puesto ' + result.position + '.';
+          } else {
+            status.textContent = 'El ranking cambió. Necesitas superar el quinto puesto.';
+          }
+        } catch {
+          if (run === rankingRun) status.textContent = 'No se pudo confirmar el guardado. Revisa tu conexión e intenta de nuevo.';
+        } finally {
+          if (run === rankingRun) { rankingBusy = false; button.disabled = false; }
+        }
+        if (run === rankingRun) {
+          // Refresh the table without replacing the name field or save confirmation.
+          try { sharedRanking = await rankingService.list(); rankingLoaded = true; renderRanking(); } catch {}
+        }
+        return;
+      }
+      const entries = readRanking();
+      const currentPosition = rankingPosition(score, entries);
+      if (currentPosition < 0) { $('#ranking-status').textContent = 'El ranking cambió. Necesitas superar el quinto puesto.'; renderRanking(); return; }
+      entries.splice(currentPosition, 0, { name, score });
+      try { window.localStorage.setItem(RANKING_KEY, JSON.stringify(entries.slice(0, 5))); }
+      catch { $('#ranking-status').textContent = 'No se pudo guardar. Habilita el almacenamiento del navegador e intenta de nuevo.'; return; }
+      rankingSaved = true;
+      form.hidden = true;
+      renderRanking();
+      $('#ranking-status').textContent = '¡Guardado! ' + name + ', ocupas el puesto ' + (currentPosition + 1) + '.';
+    };
+  }
+  window.addEventListener('storage', event => {
+    if (rankingService) return;
+    if (event.key === RANKING_KEY || event.key === null) renderRanking();
+  });
   function finish() {
     state = 'lost';
     clearKeys();
@@ -809,7 +914,9 @@
       totalActs +
       '</span><span>Escaleras: ' +
       completedStairs +
-      '</span></div>' + inventorySummary() + '</div>' + scoreMarkup() + '</div><div class="end-actions"><button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button></div>';
+      '</span></div>' + inventorySummary() + '</div>' + scoreMarkup() + '</div><section id="end-ranking" class="ranking-panel"></section><div class="end-actions"><button class="primary" id="again">Reintentar con mi EPP ↻</button><button class="secondary" id="change-epp">Cambiar mi EPP</button></div>';
+    setupRankingEntry();
+    if (rankingService) refreshRanking();
     $('#again').onclick = () => {
       const gear = new Set(worn);
       reset();
@@ -920,6 +1027,7 @@
       .scrollIntoView({ block: 'start', behavior: 'instant' });
   };
   window.addEventListener('keydown', (e) => {
+    if (e.target?.matches('input, textarea, select, [contenteditable]')) return;
     if (
       ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(e.code) &&
       !['BUTTON', 'INPUT'].includes(e.target.tagName)
@@ -1926,6 +2034,12 @@
       }
     }
     requestAnimationFrame(frame);
+  }
+  renderRanking();
+  if (rankingService) {
+    $('#ranking-refresh').onclick = refreshRanking;
+    refreshRanking();
+    window.addEventListener('focus', () => { if (state !== 'lost') refreshRanking(); });
   }
   reset();
   requestAnimationFrame(frame);

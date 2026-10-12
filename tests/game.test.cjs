@@ -71,7 +71,7 @@ vm.runInContext(
 );
 const code = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8').replace(
   /reset\(\);\s*requestAnimationFrame\(frame\);/,
-  `reset();globalThis.test={collectCoin,frame,updateWorkers,passingVisible,pallets,inventoryReach,inspectHazard,get world(){return WORLD},toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
+  `reset();globalThis.test={collectCoin,frame,updateWorkers,passingVisible,pallets,inventoryReach,inspectHazard,get world(){return WORLD},toggleHandrail,nearbyHandrail,get railHeld(){return railHeld},readRanking,rankingPosition,rankingMarkup,scoreSummary,finish,inventorySummary,update,interact,reset,render,pause,hud,hazards,crossings,noJumpZones,keys,workers,stairs,stairWidth,floorAt,runSpeed,stopTime,stopWidth,buildSector,advanceSector,focusTokens,coins,
  get sector(){return sector},get totalFish(){return totalFish},get totalCoins(){return totalCoins},get fishFound(){return fishFound},get streak(){return streak},get completedStairs(){return completedStairs},get totalActs(){return totalActs},get totalReports(){return totalReports},get totalPallets(){return totalPallets},
  get player(){return player},get state(){return state},get lives(){return lives},get worn(){return worn},get epp(){return epp},get incident(){return incident},get triggered(){return triggered},get found(){return found},
  start(ids=['helmet','vest','boots']){worn=new Set(ids);state='playing';hud()},
@@ -1106,3 +1106,56 @@ for (let level = 1; level <= 100; level++) {
 }
 assert.equal(t.sector, 101);
 console.log('PASS: 100 actual sector boundaries, no final level, lives and cumulative progress preserved.');
+
+// Leaderboard persistence, strict qualification, safe names and one save per run.
+const savedRanking = new Map();
+sandbox.window.localStorage = {
+  getItem: key => savedRanking.get(key) ?? null,
+  setItem: (key, value) => savedRanking.set(key, value),
+};
+const rankingKey = 'warehouse-safe-route-top5-v1';
+const submitRanking = name => {
+  $('#ranking-name').value = name;
+  $('#ranking-form').onsubmit({ preventDefault() {} });
+};
+assert.equal(t.readRanking().length, 0);
+assert.equal(t.rankingPosition(-100), 0, 'Empty slots accept negative scores');
+savedRanking.set(rankingKey, JSON.stringify([
+  { name: 'A', score: 500 }, { name: 'B', score: 400 },
+  { name: 'C', score: 300 }, { name: 'D', score: 200 }, { name: 'E', score: 100 },
+]));
+assert.equal(t.rankingPosition(100), -1, 'Tie with fifth place does not qualify');
+assert.equal(t.rankingPosition(400), 2, 'Older tied score stays ahead');
+assert.equal(t.rankingPosition(501), 0);
+t.reset(); t.start();
+// Initial score is zero, so make room below it.
+savedRanking.set(rankingKey, JSON.stringify([
+  { name: 'A', score: 500 }, { name: 'B', score: 400 },
+  { name: 'C', score: 300 }, { name: 'D', score: -1 }, { name: 'E', score: -2 },
+]));
+t.finish();
+submitRanking('   ');
+assert.equal(t.readRanking()[4].name, 'E');
+submitRanking(' <Sofia> ');
+assert.equal(t.readRanking().length, 5);
+assert.equal(t.readRanking()[3].name, '<Sofia>');
+assert.equal(t.readRanking()[3].score, 0);
+assert(!t.rankingMarkup().includes('<Sofia>'), 'Names cannot inject markup');
+const beforeDuplicate = savedRanking.get(rankingKey);
+submitRanking('Duplicate');
+assert.equal(savedRanking.get(rankingKey), beforeDuplicate);
+t.reset();
+assert.equal(t.readRanking()[3].name, '<Sofia>', 'Restart preserves saved ranking');
+savedRanking.set(rankingKey, 'broken JSON');
+assert.equal(t.readRanking().length, 0);
+savedRanking.set(rankingKey, JSON.stringify([null, { name: 'Bad', score: '100' }, { name: 'Good', score: 20 }]));
+assert.equal(t.readRanking().length, 1);
+t.reset(); t.finish();
+const originalSetItem = sandbox.window.localStorage.setItem;
+sandbox.window.localStorage.setItem = () => { throw new Error('Storage blocked'); };
+submitRanking('Retry');
+assert($('#ranking-status').textContent.includes('No se pudo guardar'));
+sandbox.window.localStorage.setItem = originalSetItem;
+submitRanking('Retry');
+assert.equal(t.readRanking().length, 2, 'Failed saves can be retried');
+console.log('PASS: top-five ordering, ties, names, persistence, duplicate protection, malformed storage and save retry.');

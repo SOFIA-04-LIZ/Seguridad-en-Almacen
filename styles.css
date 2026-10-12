@@ -2342,3 +2342,18 @@ footer .creator-credit b {
   font-weight: 800;
   margin-right: 0;
 }
+
+/* Persistent top-five leaderboard. */
+.ranking-panel { margin: 20px 0; padding: 20px; background: #191919; color: #f5f5ed; border: 1px solid #635321; border-radius: 12px; }
+.ranking-panel h2, .ranking-panel h3 { color: #ffc600; margin: 0 0 12px; }
+.ranking-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.ranking-table th, .ranking-table td { padding: 10px 6px; border-bottom: 1px solid #414141; text-align: left; overflow-wrap: anywhere; }
+.ranking-table th:first-child, .ranking-table td:first-child { width: 64px; }
+.ranking-table th:last-child, .ranking-table td:last-child { width: 85px; text-align: right; }
+.ranking-table tbody tr:first-child { color: #ffc600; }
+.ranking-note { color: #bcbcb4; font-size: 13px; }
+.ranking-entry { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.ranking-entry input { flex: 1; min-width: 120px; width: 100%; min-height: 44px; border: 1px solid #91814a; border-radius: 6px; background: #fff; color: #111; padding: 10px; font: inherit; }
+.ranking-entry input:focus-visible { outline: 3px solid #ffc600; outline-offset: 2px; }
+#modal .ranking-panel { padding: 12px; margin: 12px 0; }
+#modal .ranking-table th, #modal .ranking-table td { padding: 6px; }
