@@ -155,3 +155,7 @@ Publica `index.html`, `game.js`, `ranking.js` y `styles.css` juntos. El SQL ya i
 ## Nombre, departamento y área
 
 Ejecutar `supabase-ranking-profile.sql` en el SQL Editor antes de publicar esta versión. Conserva las marcas previas y agrega departamento y área; los datos que no existían se muestran como «—». Las funciones anteriores se conservan para que la versión publicada siga operando durante la actualización. Las nuevas inscripciones requieren los tres campos.
+
+## Ranking adaptable y nombre del juego
+
+El título visible y el título de la pestaña son «Safety Route: Misión Almacén». El ranking conserva su tabla en pantallas amplias y se organiza en tarjetas cuando el espacio disponible es de 620 px o menos, o en pantallas de hasta 700 px. Cada tarjeta muestra puesto, puntos, nombre, departamento y área sin desplazamiento horizontal, también en los resultados de partida.

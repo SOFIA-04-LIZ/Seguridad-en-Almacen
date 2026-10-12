@@ -2359,9 +2359,46 @@ footer .creator-credit b {
 #modal .ranking-table th, #modal .ranking-table td { padding: 6px; }
 
 /* Department and area remain readable on narrow screens. */
-#ranking-board, #end-ranking-board { overflow-x: auto; }
-.ranking-table { min-width: 560px; }
+#ranking-board, #end-ranking-board { min-width: 0; container-type: inline-size; }
+.ranking-table { min-width: 0; }
 .ranking-table th:first-child, .ranking-table td:first-child { width: 70px; overflow-wrap: normal; }
 .ranking-entry label { flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; font-weight: 700; min-width: 0; }
 .ranking-entry input { box-sizing: border-box; }
 .ranking-entry button { align-self: end; }
+
+/* Stack every ranking field when its available width is narrow. */
+.ranking-panel { min-width: 0; }
+.ranking-panel p { overflow-wrap: anywhere; }
+@container (max-width: 620px) {
+
+  .ranking-table { display: block; width: 100%; min-width: 0; }
+  .ranking-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .ranking-table tbody { display: grid; gap: 12px; }
+  .ranking-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 14px; padding: 14px; background: #22221f; border: 1px solid #41413a; border-radius: 10px; }
+  .ranking-table tbody tr:first-child { border-color: #99802d; background: #29261a; }
+  .ranking-table tbody :is(th, td), #modal .ranking-table tbody :is(th, td) { display: block; width: auto; min-width: 0; padding: 0; border: 0; text-align: left; overflow-wrap: anywhere; font-size: 15px; line-height: 1.4; }
+  .ranking-table tbody :is(th, td)::before { content: attr(data-label); display: block; margin-bottom: 3px; color: #bbbbae; font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+  .ranking-table tbody td:first-child { grid-column: 1; grid-row: 1; font-weight: 800; }
+  .ranking-table tbody td:last-child { grid-column: 2; grid-row: 1; text-align: right; font-weight: 800; }
+  .ranking-table tbody th { grid-column: 1 / -1; grid-row: 2; font-size: 18px; }
+  .ranking-table tbody td:nth-child(3), .ranking-table tbody td:nth-child(4) { grid-column: 1 / -1; }
+}
+@media (max-width: 700px) {
+
+  .ranking-table { display: block; width: 100%; min-width: 0; }
+  .ranking-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .ranking-table tbody { display: grid; gap: 12px; }
+  .ranking-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 14px; padding: 14px; background: #22221f; border: 1px solid #41413a; border-radius: 10px; }
+  .ranking-table tbody tr:first-child { border-color: #99802d; background: #29261a; }
+  .ranking-table tbody :is(th, td), #modal .ranking-table tbody :is(th, td) { display: block; width: auto; min-width: 0; padding: 0; border: 0; text-align: left; overflow-wrap: anywhere; font-size: 15px; line-height: 1.4; }
+  .ranking-table tbody :is(th, td)::before { content: attr(data-label); display: block; margin-bottom: 3px; color: #bbbbae; font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+  .ranking-table tbody td:first-child { grid-column: 1; grid-row: 1; font-weight: 800; }
+  .ranking-table tbody td:last-child { grid-column: 2; grid-row: 1; text-align: right; font-weight: 800; }
+  .ranking-table tbody th { grid-column: 1 / -1; grid-row: 2; font-size: 18px; }
+  .ranking-table tbody td:nth-child(3), .ranking-table tbody td:nth-child(4) { grid-column: 1 / -1; }
+  .ranking-panel { padding: 16px; }
+  .ranking-entry { flex-direction: column; }
+  .ranking-entry label { flex: auto; width: 100%; }
+  .ranking-entry input { min-width: 0; }
+  .ranking-entry button { align-self: stretch; width: 100%; }
+}

@@ -817,8 +817,8 @@
   }
   function rankingMarkup(entries = readRanking()) {
     const escape = name => name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-    return '<table class="ranking-table"><thead><tr><th scope="col">Puesto</th><th scope="col">Nombre</th><th scope="col">Departamento</th><th scope="col">Área</th><th scope="col">Puntos</th></tr></thead><tbody>' +
-      Array.from({ length: 5 }, (_, index) => '<tr><td>' + (index + 1) + '</td><th scope="row">' + (entries[index] ? escape(entries[index].name) : 'Disponible') + '</th><td>' + (entries[index]?.department ? escape(entries[index].department) : '—') + '</td><td>' + (entries[index]?.area ? escape(entries[index].area) : '—') + '</td><td>' + (entries[index] ? entries[index].score : '—') + '</td></tr>').join('') + '</tbody></table>';
+    return '<table class="ranking-table" role="table" aria-label="Cinco mejores puntajes"><thead role="rowgroup"><tr role="row"><th scope="col">Puesto</th><th scope="col">Nombre</th><th scope="col">Departamento</th><th scope="col">Área</th><th scope="col">Puntos</th></tr></thead><tbody role="rowgroup">' +
+      Array.from({ length: 5 }, (_, index) => '<tr role="row"><td role="cell" data-label="Puesto">' + (index + 1) + '</td><th role="rowheader" scope="row" data-label="Nombre">' + (entries[index] ? escape(entries[index].name) : 'Disponible') + '</th><td role="cell" data-label="Departamento">' + (entries[index]?.department ? escape(entries[index].department) : '—') + '</td><td role="cell" data-label="Área">' + (entries[index]?.area ? escape(entries[index].area) : '—') + '</td><td role="cell" data-label="Puntos">' + (entries[index] ? entries[index].score : '—') + '</td></tr>').join('') + '</tbody></table>';
   }
   function renderRanking() {
     $('#ranking-board').innerHTML = rankingMarkup();

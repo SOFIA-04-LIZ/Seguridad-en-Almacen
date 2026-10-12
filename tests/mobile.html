@@ -40,6 +40,18 @@
             const check = (condition, message) => {
               if (!condition) throw Error(width + 'x' + height + ': ' + message);
             };
+            check(doc.querySelector('.game-name').textContent === 'Safety Route: Misión Almacén', 'incorrect game title');
+            const rankingBoard = doc.querySelector('#ranking-board');
+            const firstRank = rankingBoard.querySelector('tbody tr');
+            if (firstRank) {
+              firstRank.querySelector('th').textContent = 'Sofia Jimenez Serna con nombre largo';
+              firstRank.querySelector('td:nth-child(3)').textContent = 'Departamento de Logística y Control de Inventarios';
+              firstRank.querySelector('td:nth-child(4)').textContent = 'Área de recepción y almacenamiento de productos';
+            }
+            check(rankingBoard.scrollWidth <= rankingBoard.clientWidth + 1, 'ranking requires horizontal scrolling');
+            const rankingTable = rankingBoard.querySelector('table');
+            check(rankingTable.getBoundingClientRect().right <= rankingBoard.getBoundingClientRect().right + 1, 'ranking table exceeds available width');
+            if (width <= 700) check(win.getComputedStyle(firstRank).display === 'grid', 'mobile ranking should use cards');
             const hero = doc.querySelector('.hero');
             if (win.getComputedStyle(hero).display !== 'none') {
               const title = box('.hero h1');
