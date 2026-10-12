@@ -806,7 +806,7 @@
       const entries = JSON.parse(window.localStorage.getItem(RANKING_KEY) || '[]');
       if (!Array.isArray(entries)) return [];
       return entries.filter(entry => entry && typeof entry.name === 'string' && entry.name.trim() && Number.isSafeInteger(entry.score))
-        .map(entry => ({ name: entry.name.trim().slice(0, 30), score: entry.score }))
+        .map(entry => ({ name: entry.name.trim().slice(0, 30), department: typeof entry.department === 'string' ? entry.department : '', area: typeof entry.area === 'string' ? entry.area : '', score: entry.score }))
         .sort((a, b) => b.score - a.score).slice(0, 5);
     } catch { return []; }
   }
@@ -817,8 +817,8 @@
   }
   function rankingMarkup(entries = readRanking()) {
     const escape = name => name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-    return '<table class="ranking-table"><thead><tr><th scope="col">Puesto</th><th scope="col">Nombre</th><th scope="col">Puntos</th></tr></thead><tbody>' +
-      Array.from({ length: 5 }, (_, index) => '<tr><td>' + (index + 1) + '</td><th scope="row">' + (entries[index] ? escape(entries[index].name) : 'Disponible') + '</th><td>' + (entries[index] ? entries[index].score : '—') + '</td></tr>').join('') + '</tbody></table>';
+    return '<table class="ranking-table"><thead><tr><th scope="col">Puesto</th><th scope="col">Nombre</th><th scope="col">Departamento</th><th scope="col">Área</th><th scope="col">Puntos</th></tr></thead><tbody>' +
+      Array.from({ length: 5 }, (_, index) => '<tr><td>' + (index + 1) + '</td><th scope="row">' + (entries[index] ? escape(entries[index].name) : 'Disponible') + '</th><td>' + (entries[index]?.department ? escape(entries[index].department) : '—') + '</td><td>' + (entries[index]?.area ? escape(entries[index].area) : '—') + '</td><td>' + (entries[index] ? entries[index].score : '—') + '</td></tr>').join('') + '</tbody></table>';
   }
   function renderRanking() {
     $('#ranking-board').innerHTML = rankingMarkup();
@@ -842,18 +842,23 @@
     }
   }
   function setupRankingEntry() {
+    const draft = ['name', 'department', 'area'].map(field => $('#ranking-' + field)?.value || '');
     const score = scoreSummary().total;
     const position = rankingService && !rankingLoaded ? -1 : rankingPosition(score);
     $('#end-ranking').innerHTML = '<h3>🏆 Ranking · Top 5</h3><div id="end-ranking-board">' + rankingMarkup() + '</div>' +
-      (!rankingSaved && position >= 0 ? '<form id="ranking-form"><p>¡Tu puntaje alcanza el puesto ' + (position + 1) + '! Guarda tu nombre.</p><label for="ranking-name">Tu nombre</label><div class="ranking-entry"><input id="ranking-name" name="name" maxlength="30" autocomplete="nickname" required placeholder="Escribe tu nombre" /><button class="primary" type="submit">Guardar puntaje</button></div></form>' : '<p>' + (rankingSaved ? 'Tu puntaje ya está registrado.' : rankingService && !rankingLoaded ? 'Cargando el ranking compartido…' : 'Supera el puntaje del quinto puesto para entrar al ranking.') + '</p>') +
+      (!rankingSaved && position >= 0 ? '<form id="ranking-form"><p>¡Tu puntaje alcanza el puesto ' + (position + 1) + '! Guarda tus datos.</p><div class="ranking-entry"><label for="ranking-name">Nombre<input id="ranking-name" name="name" maxlength="30" autocomplete="nickname" required placeholder="Escribe tu nombre" /></label><label for="ranking-department">Departamento<input id="ranking-department" name="department" maxlength="60" required placeholder="Ej. Logística" /></label><label for="ranking-area">Área<input id="ranking-area" name="area" maxlength="60" required placeholder="Ej. Control de inventarios" /></label><button class="primary" type="submit">Guardar puntaje</button></div></form>' : '<p>' + (rankingSaved ? 'Tu puntaje ya está registrado.' : rankingService && !rankingLoaded ? 'Cargando el ranking compartido…' : 'Supera el puntaje del quinto puesto para entrar al ranking.') + '</p>') +
       '<p id="ranking-status" role="status" aria-live="polite"></p>' + (rankingService ? '<button id="end-ranking-refresh" class="secondary" type="button">Actualizar ranking</button>' : '');
     if (rankingService) $('#end-ranking-refresh').onclick = refreshRanking;
+    ['name', 'department', 'area'].forEach((field, index) => { const input = $('#ranking-' + field); if (input) input.value = draft[index]; });
     const form = $('#ranking-form');
     if (!rankingSaved && position >= 0 && form) form.onsubmit = async event => {
       event.preventDefault();
       if (rankingSaved || rankingBusy) return;
       const name = $('#ranking-name').value.trim().slice(0, 30);
       if (!name) { $('#ranking-status').textContent = 'Escribe tu nombre para guardar el puntaje.'; return; }
+      const department = ($('#ranking-department').value || '').trim().slice(0, 60);
+      const area = ($('#ranking-area').value || '').trim().slice(0, 60);
+      if (!department || !area) { $('#ranking-status').textContent = 'Escribe tu departamento y área para guardar el puntaje.'; return; }
       if (rankingService) {
         const run = rankingRun;
         const status = $('#ranking-status');
@@ -862,7 +867,7 @@
         button.disabled = true;
         status.textContent = 'Guardando puntaje…';
         try {
-          const result = await rankingService.submit(run, name, score);
+          const result = await rankingService.submit(run, name, score, department, area);
           if (run !== rankingRun || state !== 'lost') return;
           if (result.accepted) {
             rankingSaved = true;
@@ -885,7 +890,7 @@
       const entries = readRanking();
       const currentPosition = rankingPosition(score, entries);
       if (currentPosition < 0) { $('#ranking-status').textContent = 'El ranking cambió. Necesitas superar el quinto puesto.'; renderRanking(); return; }
-      entries.splice(currentPosition, 0, { name, score });
+      entries.splice(currentPosition, 0, { name, score, department, area });
       try { window.localStorage.setItem(RANKING_KEY, JSON.stringify(entries.slice(0, 5))); }
       catch { $('#ranking-status').textContent = 'No se pudo guardar. Habilita el almacenamiento del navegador e intenta de nuevo.'; return; }
       rankingSaved = true;

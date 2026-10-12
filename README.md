@@ -151,3 +151,7 @@ Al terminar una partida, si hay lugares disponibles o el puntaje supera al quint
 `ranking.js` conecta GitHub Pages con las funciones de `supabase-ranking.sql` usando la clave publicable del proyecto. Carga la tabla al abrir la página y al terminar una partida; el botón Actualizar ranking vuelve a consultarla. Guardar valida el puesto en la base de datos y conserva cinco registros con prioridad a las marcas anteriores en empates. No requiere cuentas de los jugadores. El juego funciona sin conexión, pero el ranking compartido requiere internet y no sustituye errores de red con registros locales.
 
 Publica `index.html`, `game.js`, `ranking.js` y `styles.css` juntos. El SQL ya instalado no necesita ejecutarse de nuevo. Las marcas locales anteriores no se importan automáticamente. La puntuación se calcula en el navegador; este ranking informal no verifica la autenticidad de una partida contra modificaciones del cliente.
+
+## Nombre, departamento y área
+
+Ejecutar `supabase-ranking-profile.sql` en el SQL Editor antes de publicar esta versión. Conserva las marcas previas y agrega departamento y área; los datos que no existían se muestran como «—». Las funciones anteriores se conservan para que la versión publicada siga operando durante la actualización. Las nuevas inscripciones requieren los tres campos.

@@ -15,9 +15,9 @@
     } finally { clearTimeout(timeout); }
   }
   window.WAREHOUSE_RANKING = {
-    list: () => request('warehouse_top5'),
-    submit: (runId, name, score) => request('warehouse_submit_score', {
-      p_run_id: runId, p_name: name, p_score: score,
+    list: () => request('warehouse_top5_profile'),
+    submit: (runId, name, score, department, area) => request('warehouse_submit_score_profile', {
+      p_run_id: runId, p_name: name, p_score: score, p_department: department, p_area: area,
     }),
     newRun: () => crypto.randomUUID(),
   };

@@ -5,11 +5,11 @@ const path = require('node:path');
 let harness = fs.readFileSync(path.join(__dirname, 'game.test.cjs'), 'utf8').split('// The actual entry button')[0];
 harness = harness.replace("const fs = require('node:fs');", '').replace("const vm = require('node:vm');", '').replace("const path = require('node:path');", '');
 harness = harness.replace('vm.runInContext(code, sandbox);', `
-let entries = [{name:'First',score:100}], failSave = false, calls = 0, accepted = true;
+let entries = [{name:'First',department:'Logística',area:'Inventarios',score:100}], failSave = false, calls = 0, accepted = true;
 sandbox.window.WAREHOUSE_RANKING = {
  newRun: () => 'run-' + Math.random(),
  list: async () => entries,
- submit: async () => { calls++; if (failSave) throw new Error('offline'); return {accepted,position:2}; },
+ submit: async (run, name, score, department, area) => { assert.equal(department, 'Logística'); assert.equal(area, 'Inventarios'); calls++; if (failSave) throw new Error('offline'); return {accepted,position:2}; },
 };
 vm.runInContext(code, sandbox);`);
 vm.runInNewContext(harness + `
@@ -18,7 +18,11 @@ vm.runInNewContext(harness + `
  await flush();
  assert.equal(t.readRanking()[0].name, 'First');
  t.reset(); t.start(); t.finish(); await flush();
- const submit = name => { $('#ranking-name').value=name; return $('#ranking-form').onsubmit({preventDefault(){}}); };
+ const submit = name => { $('#ranking-name').value=name; $('#ranking-department').value='Logística'; $('#ranking-area').value='Inventarios'; return $('#ranking-form').onsubmit({preventDefault(){}}); };
+ $('#ranking-name').value='Sofia'; $('#ranking-department').value=' '; $('#ranking-area').value='Inventarios';
+ await $('#ranking-form').onsubmit({preventDefault(){}}); assert.equal(calls,0);
+ assert($('#ranking-status').textContent.includes('departamento y área'));
+ assert(t.rankingMarkup().includes('Logística'));
  failSave=true; await submit('Sofia');
  assert($('#ranking-status').textContent.includes('No se pudo confirmar'));
  failSave=false; const pending=submit('Sofia'); await submit('Duplicate'); await pending;

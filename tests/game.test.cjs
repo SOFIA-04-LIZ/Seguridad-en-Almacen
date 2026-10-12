@@ -1116,6 +1116,8 @@ sandbox.window.localStorage = {
 const rankingKey = 'warehouse-safe-route-top5-v1';
 const submitRanking = name => {
   $('#ranking-name').value = name;
+  $('#ranking-department').value = 'Logística';
+  $('#ranking-area').value = 'Inventarios';
   $('#ranking-form').onsubmit({ preventDefault() {} });
 };
 assert.equal(t.readRanking().length, 0);
@@ -1140,6 +1142,8 @@ submitRanking(' <Sofia> ');
 assert.equal(t.readRanking().length, 5);
 assert.equal(t.readRanking()[3].name, '<Sofia>');
 assert.equal(t.readRanking()[3].score, 0);
+assert.equal(t.readRanking()[3].department, 'Logística');
+assert.equal(t.readRanking()[3].area, 'Inventarios');
 assert(!t.rankingMarkup().includes('<Sofia>'), 'Names cannot inject markup');
 const beforeDuplicate = savedRanking.get(rankingKey);
 submitRanking('Duplicate');

@@ -2357,3 +2357,11 @@ footer .creator-credit b {
 .ranking-entry input:focus-visible { outline: 3px solid #ffc600; outline-offset: 2px; }
 #modal .ranking-panel { padding: 12px; margin: 12px 0; }
 #modal .ranking-table th, #modal .ranking-table td { padding: 6px; }
+
+/* Department and area remain readable on narrow screens. */
+#ranking-board, #end-ranking-board { overflow-x: auto; }
+.ranking-table { min-width: 560px; }
+.ranking-table th:first-child, .ranking-table td:first-child { width: 70px; overflow-wrap: normal; }
+.ranking-entry label { flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; font-weight: 700; min-width: 0; }
+.ranking-entry input { box-sizing: border-box; }
+.ranking-entry button { align-self: end; }
