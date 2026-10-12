@@ -62,18 +62,12 @@
                 check(rect.left >= 0 && rect.right <= width + 1, selector + ' clipped');
                 check(element.textContent.includes('Sofia Lizeth Jimenez Serna'), 'creator name missing');
               }
-              check(
-                parseFloat(win.getComputedStyle(doc.querySelector('.creator-highlight strong')).fontSize) <
-                  parseFloat(win.getComputedStyle(doc.querySelector('.hero h1')).fontSize),
-                'creator credit competes with game title',
-              );
-              if (width <= 700)
-                check(
-                  parseFloat(
-                    win.getComputedStyle(doc.querySelector('.hero h1')).fontSize,
-                  ) >= 32,
-                  'mobile heading too small',
-                );
+              const heading = doc.querySelector('.game-name');
+              check(win.getComputedStyle(heading).whiteSpace === 'nowrap', 'heading must stay on one line');
+              check(heading.scrollWidth <= heading.clientWidth + 1, 'single-line heading exceeds width ' + heading.scrollWidth + '/' + heading.clientWidth + ' font=' + win.getComputedStyle(heading).fontSize);
+              const textRange = doc.createRange();
+              textRange.selectNodeContents(heading);
+              check(textRange.getClientRects().length === 1, 'heading wraps to another line');
               check(!doc.querySelector('.hero aside'), 'old mission panel remains');
               check(
                 doc.querySelector('.intro').textContent.includes('Recorrido infinito: siempre hay otro sector. Continúa mientras tengas vidas.'),
