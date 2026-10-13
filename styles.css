@@ -2366,53 +2366,35 @@ footer .creator-credit b {
 .ranking-entry input { box-sizing: border-box; }
 .ranking-entry button { align-self: end; }
 
-/* Stack every ranking field when its available width is narrow. */
+/* Keep all five ranking columns together on every screen. */
 .ranking-panel { min-width: 0; }
 .ranking-panel p { overflow-wrap: anywhere; }
+.ranking-table { width: 100%; min-width: 0; table-layout: fixed; }
+.ranking-table :is(th, td) { vertical-align: top; line-height: 1.3; }
+.ranking-table :is(th, td):nth-child(1) { width: 10%; }
+.ranking-table :is(th, td):nth-child(2) { width: 30%; }
+.ranking-table :is(th, td):nth-child(3) { width: 25%; }
+.ranking-table :is(th, td):nth-child(4) { width: 21%; }
+.ranking-table :is(th, td):nth-child(5) { width: 14%; text-align: right; }
 @container (max-width: 620px) {
-
-  .ranking-table { display: block; width: 100%; min-width: 0; }
-  .ranking-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .ranking-table tbody { display: grid; gap: 6px; }
-  .ranking-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 10px; padding: 8px 10px; background: #22221f; border: 1px solid #41413a; border-radius: 10px; }
-  .ranking-table tbody tr:first-child { border-color: #99802d; background: #29261a; }
-  .ranking-table tbody :is(th, td), #modal .ranking-table tbody :is(th, td) { display: block; width: auto; min-width: 0; padding: 0; border: 0; text-align: left; overflow-wrap: anywhere; font-size: 12px; line-height: 1.25; }
-  .ranking-table tbody :is(th, td)::before { content: attr(data-label); display: block; margin-bottom: 1px; color: #bbbbae; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
-  .ranking-table tbody td:first-child { grid-column: 1; grid-row: 1; font-weight: 800; }
-  .ranking-table tbody td:last-child { grid-column: 2; grid-row: 1; text-align: right; font-weight: 800; }
-  .ranking-table tbody th { grid-column: 1 / -1; grid-row: 2; font-size: 14px; }
-  .ranking-table tbody td:nth-child(3) { grid-column: 1; grid-row: 3; }
-  .ranking-table tbody td:nth-child(4) { grid-column: 2; grid-row: 3; }
-  .ranking-table tbody th::before { display: none; }
-  .ranking-table tbody td:first-child::before { display: inline; content: '#'; margin-right: 2px; }
-  .ranking-table tbody td:last-child::before { display: none; }
-  .ranking-table tbody td:last-child::after { content: ' pts'; font-size: 10px; font-weight: 400; }
+  .ranking-table :is(th, td), #modal .ranking-table :is(th, td) { padding: 7px 2px; font-size: clamp(11px, 3.5cqi, 13px); overflow-wrap: anywhere; }
+  .ranking-table thead th { font-size: clamp(9px, 2.8cqi, 11px); font-weight: 700; }
+  .ranking-table :is(th, td):nth-child(1) { width: 12%; }
+  .ranking-table :is(th, td):nth-child(2) { width: 29%; }
+  .ranking-table :is(th, td):nth-child(4) { width: 20%; }
 }
 @media (max-width: 700px) {
-
-  .ranking-table { display: block; width: 100%; min-width: 0; }
-  .ranking-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .ranking-table tbody { display: grid; gap: 6px; }
-  .ranking-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 10px; padding: 8px 10px; background: #22221f; border: 1px solid #41413a; border-radius: 10px; }
-  .ranking-table tbody tr:first-child { border-color: #99802d; background: #29261a; }
-  .ranking-table tbody :is(th, td), #modal .ranking-table tbody :is(th, td) { display: block; width: auto; min-width: 0; padding: 0; border: 0; text-align: left; overflow-wrap: anywhere; font-size: 12px; line-height: 1.25; }
-  .ranking-table tbody :is(th, td)::before { content: attr(data-label); display: block; margin-bottom: 1px; color: #bbbbae; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
-  .ranking-table tbody td:first-child { grid-column: 1; grid-row: 1; font-weight: 800; }
-  .ranking-table tbody td:last-child { grid-column: 2; grid-row: 1; text-align: right; font-weight: 800; }
-  .ranking-table tbody th { grid-column: 1 / -1; grid-row: 2; font-size: 14px; }
-  .ranking-table tbody td:nth-child(3) { grid-column: 1; grid-row: 3; }
-  .ranking-table tbody td:nth-child(4) { grid-column: 2; grid-row: 3; }
-  .ranking-table tbody th::before { display: none; }
-  .ranking-table tbody td:first-child::before { display: inline; content: '#'; margin-right: 2px; }
-  .ranking-table tbody td:last-child::before { display: none; }
-  .ranking-table tbody td:last-child::after { content: ' pts'; font-size: 10px; font-weight: 400; }
+  .ranking-table :is(th, td), #modal .ranking-table :is(th, td) { padding: 7px 2px; font-size: 11px; overflow-wrap: anywhere; }
+  .ranking-table thead th { font-size: 9px; }
+  .ranking-table :is(th, td):nth-child(1) { width: 12%; }
+  .ranking-table :is(th, td):nth-child(2) { width: 29%; }
+  .ranking-table :is(th, td):nth-child(4) { width: 20%; }
   .ranking-panel, #modal .ranking-panel { padding: 10px; margin-block: 12px; }
   .ranking-panel h2, .ranking-panel h3, #modal .ranking-panel h3 { font-size: 22px; line-height: 1.15; margin-bottom: 8px; }
   .ranking-panel p, #modal .ranking-panel p { font-size: 12px; line-height: 1.35; margin-block: 7px; }
   .ranking-panel .eyebrow { font-size: 9px; letter-spacing: 1px; }
   .ranking-panel .ranking-note { font-size: 10px; }
   .ranking-panel button { font-size: 12px; padding: 8px 12px; min-height: 44px; }
-
   .ranking-entry { flex-direction: column; }
   .ranking-entry label { flex: auto; width: 100%; }
   .ranking-entry input { min-width: 0; }

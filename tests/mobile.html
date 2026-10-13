@@ -51,7 +51,9 @@
             check(rankingBoard.scrollWidth <= rankingBoard.clientWidth + 1, 'ranking requires horizontal scrolling');
             const rankingTable = rankingBoard.querySelector('table');
             check(rankingTable.getBoundingClientRect().right <= rankingBoard.getBoundingClientRect().right + 1, 'ranking table exceeds available width');
-            if (width <= 700) check(win.getComputedStyle(firstRank).display === 'grid', 'mobile ranking should use cards');
+            check(win.getComputedStyle(firstRank).display === 'table-row', 'ranking must keep all columns in a table row');
+            const cells = [...firstRank.children].map(cell => cell.getBoundingClientRect());
+            check(cells.every(cell => Math.abs(cell.top - cells[0].top) <= 1), 'ranking fields must share the same row');
             const hero = doc.querySelector('.hero');
             if (win.getComputedStyle(hero).display !== 'none') {
               const title = box('.hero h1');
