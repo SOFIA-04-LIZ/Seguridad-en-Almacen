@@ -2420,7 +2420,13 @@ footer .creator-credit b {
 }
 
 /* Keep the complete title on one line using its available container width. */
-.hero h1.game-name { white-space: nowrap; overflow-wrap: normal; text-wrap: nowrap; letter-spacing: 0; font-size: min(86px, 4.8vw); }
+.hero h1.game-name { white-space: nowrap; overflow-wrap: normal; text-wrap: nowrap; letter-spacing: 0; font-size: min(86px, calc(var(--title-fit-ratio, 5) * .88vw)); }
 @supports (font-size: 1cqi) {
-  .hero h1.game-name { font-size: min(86px, 5cqi); }
+  .hero h1.game-name { font-size: min(86px, calc(var(--title-fit-ratio, 5) * 1cqi)); }
 }
+
+/* Keep the creator credit secondary and compact. */
+.hero .creator-highlight { gap: 1px; padding: 5px 9px; margin-bottom: 12px; border-left-width: 2px; border-radius: 0 5px 5px 0; line-height: 1.25; }
+.hero .creator-highlight > span { font-size: 8px; letter-spacing: 1px; }
+.hero .creator-highlight > strong { font-size: 12px; }
+.hero .creator-highlight > small { font-size: 10px; }
